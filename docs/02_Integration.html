@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Integration — features parquet consumer spec</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#FAFAF8;--card:#FFFFFF;--text:#1a1a1a;--muted:#6b6b6b;--hint:#999;--border:rgba(0,0,0,0.08);
+ --green-bg:#EDF5E0;--green-text:#274D0A;--green-accent:#65A30D;
+ --teal-bg:#E1F5EE;--teal-text:#065040;--teal-accent:#0D7A5C;
+ --blue-bg:#E6F1FB;--blue-text:#0B447C;--blue-accent:#2563EB;
+ --coral-bg:#FAECE7;--coral-text:#702911;--coral-accent:#EA580C;
+ --amber-bg:#FEF6E0;--amber-text:#6B4F0C;--amber-accent:#D97706;
+ --purple-bg:#EEEDFE;--purple-text:#3B3489;--purple-accent:#7C3AED;
+ --red-bg:#FCEBEB;--red-text:#791F1F;--red-accent:#DC2626;
+ --code-bg:#1a1a1a;--code-text:#e8e8e0;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.75;margin:0;padding:0;font-size:15.5px;-webkit-font-smoothing:antialiased}
+.container{max-width:880px;margin:0 auto;padding:40px 28px 80px}
+.header{border-bottom:3px solid var(--green-accent);padding-bottom:18px;margin-bottom:8px}
+.header h1{font-size:27px;margin:0 0 8px;font-weight:800;letter-spacing:-0.5px}
+.header .subtitle{color:var(--muted);font-size:14px;margin:0 0 12px}
+.header .meta{display:flex;flex-wrap:wrap;gap:8px}
+.header .tag{font-size:12px;font-family:'JetBrains Mono',monospace;background:var(--green-bg);color:var(--green-text);padding:3px 10px;border-radius:20px}
+.header .tag.blue{background:var(--blue-bg);color:var(--blue-text)}
+.header .tag.purple{background:var(--purple-bg);color:var(--purple-text)}
+.header .tag.teal{background:var(--teal-bg);color:var(--teal-text)}
+.toc-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:22px 0 30px}
+.toc-box .toc-title{font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px}
+.toc-box ul{margin:0;padding:0;list-style:none;columns:2;column-gap:28px}
+.toc-box li{font-size:13.5px;padding:2px 0 2px 34px;text-indent:-34px;break-inside:avoid}
+.toc-box .tno{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--green-accent);display:inline-block;min-width:26px;margin-right:8px;text-indent:0}
+.toc-box ul ul li::before{content:'·';color:var(--green-accent);font-weight:700;display:inline-block;width:12px;text-indent:0}
+.toc-box a{color:var(--text);text-decoration:none;border-bottom:1px solid transparent}
+.toc-box a:hover{color:var(--green-accent);border-bottom-color:var(--green-accent)}
+.toc-box ul ul{columns:1;padding-left:0;margin:0;list-style:none}
+.toc-box ul ul li{font-size:12.5px;color:var(--muted);padding:2px 0 2px 52px;text-indent:-52px}
+.toc-box ul ul .tno{min-width:32px}
+.toc-box ul ul ul{padding-left:0}
+.toc-box ul ul ul li,.toc-box li.plain{padding:2px 0 2px 12px;text-indent:-12px}
+.toc-box ul ul ul li::before{content:'–';color:var(--muted);font-weight:400}
+@media(max-width:680px){.toc-box ul{columns:1}}
+h1{font-size:24px;font-weight:800;margin:36px 0 14px;letter-spacing:-0.3px}
+h2{font-size:21px;font-weight:700;margin:38px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--border)}
+h3{font-size:17.5px;font-weight:700;margin:28px 0 10px;color:#222}
+h4{font-size:15px;font-weight:700;margin:20px 0 8px;color:#333}
+p{margin:11px 0}
+ul,ol{margin:11px 0;padding-left:26px}
+li{margin:5px 0}
+a{color:#4D7C0F;text-decoration:none;border-bottom:1px dotted rgba(77,124,15,0.45)}
+a:hover{border-bottom-style:solid}
+a:hover{text-decoration:underline}
+strong{font-weight:700}
+hr{border:none;border-top:1px solid var(--border);margin:34px 0}
+code{font-family:'JetBrains Mono',monospace;font-size:0.86em;background:rgba(101,163,13,0.10);color:#2b4d0a;padding:2px 6px;border-radius:5px}
+pre{background:var(--code-bg);color:var(--code-text);border-radius:10px;padding:16px 18px;overflow-x:auto;margin:14px 0;border:1px solid #2a2a2a;line-height:1.55}
+pre code{background:none;color:inherit;padding:0;font-size:12.8px;white-space:pre}
+blockquote{margin:16px 0;padding:14px 18px;border-left:4px solid var(--blue-accent);background:var(--blue-bg);color:var(--blue-text);border-radius:0 8px 8px 0}
+blockquote p{margin:5px 0}
+blockquote code{background:rgba(11,68,124,0.10);color:var(--blue-text)}
+.table-wrap{overflow-x:auto;margin:16px 0;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--card)}
+th,td{border:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--green-bg);color:var(--green-text);font-weight:700;white-space:nowrap}
+tbody tr:nth-child(even){background:rgba(0,0,0,0.015)}
+td code,th code{font-size:0.85em}
+.docfooter{text-align:center;color:var(--hint);font-size:12px;font-style:italic;margin-top:40px;padding-top:18px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Integration</h1>
+    <p class="subtitle">Downstream integration spec — consuming macro_panel_features.parquet</p>
+    <div class="meta">
+      <span class="tag">Macro Liquidity Pipeline</span>
+      <span class="tag blue">spec document</span>
+      <span class="tag teal">Last updated 2026-08-13</span>
+    </div>
+  </div>
+  <nav class="toc-box"><div class="toc-title">Contents</div><ul>
+<li><span class="tno">1.</span><a href="#1-purpose">Purpose</a></li>
+<li><span class="tno">2.</span><a href="#2-file-structure">File structure</a></li>
+<li><span class="tno">3.</span><a href="#3-column-conventions">Column conventions &amp; block map</a></li>
+<li><span class="tno">4.</span><a href="#4-pit-semantics-recap">PIT semantics — recap</a><ul>
+<li><span class="tno">4.1</span><a href="#41-cross-market-timezone-adjustment-us-tw-use">Cross-market timezone adjustment (US → TW&nbsp;use)&nbsp;⭐</a><ul>
+<li><a href="#why-the-extra-day">Why the extra day?</a></li>
+<li><a href="#scope-of-impact">Scope of impact</a></li>
+<li><a href="#implementation">Implementation</a></li>
+<li><a href="#why-shift-not-built-into-pit_safepy">Why the shift is not built into pit_safe.py?</a></li>
+<li><a href="#cross-market-design-summary">Design rationale — summary</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><span class="tno">5.</span><a href="#5-sparsity-resampling">Sparsity &amp; resampling</a></li>
+<li><span class="tno">6.</span><a href="#6-fx-factor-specifics-dextaus">FX factor specifics (DEXTAUS)</a></li>
+<li><span class="tno">7.</span><a href="#7-provenance-and-limitations">Data provenance &amp; current limitations</a><ul>
+<li><span class="tno">7.1</span><a href="#71-credit-oas-deep-history">Credit OAS deep history — provenance &amp; reproducibility</a></li>
+<li><span class="tno">7.2</span><a href="#72-retired-upstream-series">BGCR (not distributed by FRED)</a></li>
+<li><span class="tno">7.3</span><a href="#73-sp500-price-index">SP500 is a price index (reference only)</a></li>
+<li><span class="tno">7.4</span><a href="#74-cftc-holiday-calendar">CFTC holiday-calendar nuance</a></li>
+</ul>
+</li>
+<li><span class="tno">8.</span><a href="#8-end-to-end-usage-example-macro-rhs-pre-flight">End-to-end usage example (Macro RHS pre-flight)</a></li>
+<li><span class="tno">9.</span><a href="#9-forward-notes-for-consumers">Forward notes for consumers</a></li>
+<li><span class="tno">10.</span><a href="#10-vintage-path">Vintage path (first-release) — design &amp; evidence</a><ul>
+<li><span class="tno">10.1</span><a href="#101-scope-one-cut-rule">Scope &amp; one-cut rule</a></li>
+<li><span class="tno">10.2</span><a href="#102-first-release-vs-lag-shifted">First-release vs lag-shifted — evidence</a></li>
+<li><span class="tno">10.3</span><a href="#103-mechanics">Mechanics &amp; consumer impact</a></li>
+</ul>
+</li>
+<li><span class="tno">11.</span><a href="#11-downstream">Downstream: factor selection &amp; DB warehouse</a><ul>
+<li><span class="tno">11.1</span><a href="#111-factor-selection">Which columns enter a pricing panel?</a></li>
+<li><span class="tno">11.2</span><a href="#112-db-warehouse">DB warehouse context (planned ingest)</a></li>
+<li><span class="tno">11.3</span><a href="#116-cftc-tff-release_date-verified-ground-truth">CFTC TFF release_date — verified ground truth</a></li>
+</ul>
+</li>
+</ul></nav>
+  <blockquote>
+<p>Spec for downstream consumers of <code>macro_panel_features.parquet</code>.
+Companion to <code>README</code> (production spec) and <code>Architecture</code> (pipeline overview).</p>
+<p><strong>Audience</strong>: anyone plugging this pipeline into a Fama-MacBeth panel, a cross-sectional risk-premia test, or an ML return-prediction model.</p>
+</blockquote>
+<hr />
+<h2 id="1-purpose">1. Purpose</h2>
+<p>The pipeline produces <strong>two</strong> primary Parquet outputs (plus <code>cftc_tff_panel.parquet</code>, the raw CFTC wide panel whose two FM-registered columns also enter the features parquet). The two are deliberately separated so that the same raw data serves both monitoring and modelling without ever mixing PIT regimes:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lag regime</th>
+<th>Use case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>macro_panel_transformed.parquet</code></td>
+<td>MON transforms on the un-lagged panel (rolling windows include <code>t</code>)</td>
+<td>Dashboard / current-state monitoring</td>
+</tr>
+<tr>
+<td><strong><code>macro_panel_features.parquet</code></strong></td>
+<td><strong><code>pit_align</code> (publication-lag shift) + FM transforms: contemporaneous changes (diff / diff_bps / pct1m / yoy)</strong></td>
+<td><strong>Fama-MacBeth macro RHS / ML-ready macro features (strict PIT)</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>This document covers <strong>only the features parquet</strong> — the artifact that merges into a downstream returns panel. (The companion equity repo's executed notebooks consume the PIT panel instead and compute their own monthly transforms — <a href="#41-cross-market-timezone-adjustment-us-tw-use">§4.1</a>, executed variant.)</p>
+<p><em>Code blocks in this document are illustrative recipes, not shipped scripts, unless the block names its source file.</em></p>
+<hr />
+<h2 id="2-file-structure">2. File structure</h2>
+<pre><code>Path:       src/output/macro_panel_features.parquet
+Index:      pandas.DatetimeIndex, business-day frequency, name='date'
+                       │
+                       └── the index extends past the last data date because
+                           pit_align() shifts each series forward by its
+                           publication lag → span = (min_data) → (max_data + max_lag)
+Columns:    &lt;SERIES_ID&gt;              level (as fetched / first-release for vintage series)
+            &lt;SERIES_ID&gt;_&lt;transform&gt;  FM transform outputs (see §3)
+</code></pre>
+<p>The exact shape is not frozen in this document — the panel grows with every incremental
+run and <code>main.py</code> logs the shape at build time. The indicator inventory below is the
+<strong>declared</strong> set; the SSoT is <code>src/config.py</code> (run <code>python src/config.py</code> for the
+health summary: <strong>40 indicators = FRED 37 + CFTC 2 + FINRA 1</strong>, plus lag-completeness validation).</p>
+<hr />
+<h2 id="3-column-conventions">3. Column conventions &amp; block map</h2>
+<p><strong>Transform suffixes</strong> (produced by <code>transformations.apply_transforms(mode='fm')</code>; each series declares its own FM list in <code>config.Indicator.fm_transforms</code>):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Suffix</th><th>Meaning</th><th>Typical use</th></tr></thead>
+<tbody>
+<tr><td><code>&lt;ID&gt;</code></td><td>Level (native units)</td><td>Composite building blocks (Net Liquidity etc.)</td></tr>
+<tr><td><code>_diff</code></td><td>First difference on native frequency</td><td>Level series → change factor</td></tr>
+<tr><td><code>_diff_bps</code></td><td>Difference in basis points</td><td>Spreads / OAS</td></tr>
+<tr><td><code>_pct1m</code></td><td>21-business-day % change</td><td>FX / index returns</td></tr>
+<tr><td><code>_yoy</code></td><td>Year-over-year % on <strong>native</strong> frequency (frequency-aware resample first)</td><td>CPI / M2 / PCE style levels</td></tr>
+</tbody>
+</table></div>
+<p><em>Z-score suffixes exist on the monitoring parquet only — the feature matrix ships no windowed statistics; compute one downstream with <code>rolling_zscore(col, 252, lag=1)</code> if needed (<a href="#9-forward-notes-for-consumers">§9</a>).</em></p>
+<p><strong>Block map</strong> (40 indicators, 9 blocks — ground truth = <code>config.ALL_INDICATORS</code>):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Block</th><th>n</th><th>Series</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Rates / repo</td><td>7</td><td><code>SOFR EFFR IORB RRPONTSYAWARD DFEDTARU DFEDTARL TGCRRATE</code></td><td>Corridor anchors + repo plumbing</td></tr>
+<tr><td>Liquidity</td><td>8</td><td><code>WALCL WDTGAL RRPONTSYD WRBWFRBL RPONTSYD WLCFLPCL H41RESPPALDKNWW M2SL</code></td><td>Fed balance sheet &amp; money; Net Liquidity components exposed separately</td></tr>
+<tr><td>Credit</td><td>5</td><td><code>BAMLH0A0HYM2 BAMLC0A0CM BAMLH0A1HYBB BAMLH0A3HYC BAMLEMHYHYLCRPIUSOAS</code></td><td>ICE BofA OAS family — deep history via splice, see <a href="#71-credit-oas-deep-history">§7.1</a></td></tr>
+<tr><td>Curve &amp; real rates</td><td>6</td><td><code>DGS2 DGS10 T10Y2Y T10Y3M DFII10 T10YIE</code></td><td>Slope, real yield, breakeven</td></tr>
+<tr><td>Volatility</td><td>1</td><td><code>VIXCLS</code></td><td>—</td></tr>
+<tr><td>Leverage / conditions</td><td>6</td><td><code>NFCI NFCILEVERAGE NFCIRISK NFCICREDIT ANFCI FINRA_MARGIN_DEBT</code></td><td>NFCI family (vintage path, <a href="#10-vintage-path">§10</a>) + FINRA margin</td></tr>
+<tr><td>FX</td><td>2</td><td><code>DEXTAUS DTWEXEMEGS</code></td><td>USD/TWD spot + EM USD index (robustness conditioning)</td></tr>
+<tr><td>Macro reference</td><td>3</td><td><code>CPIAUCSL PCEPILFE SP500</code></td><td>CPI / Core PCE via vintage path (<a href="#10-vintage-path">§10</a>); SP500 = price index, see <a href="#73-sp500-price-index">§7.3</a></td></tr>
+<tr><td>CFTC</td><td>2</td><td><code>TFF_10Y_LEVERAGED TFF_2Y_LEVERAGED</code></td><td>Leveraged-fund UST net positioning (registered FM factors)</td></tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="4-pit-semantics-recap">4. PIT semantics — recap</h2>
+<p><strong>The rule in one sentence:</strong> a value may appear at index date <em>t</em> only if the public could already know it by <em>t</em> — look-ahead means using a number the world had not yet seen.</p>
+<p><strong>Path 1 — standard fixed lag.</strong> Each series shifts forward by its publication lag (<code>config.Indicator.lag</code> is the single source of truth; <code>main.py</code> builds the lag map and passes it to <code>pit_safe.pit_align()</code>), then lands on a business-day grid with forward-fill. Concrete timeline (FINRA, <code>lag=25</code>): the September margin-debt value carries <code>data_date = 2024-09-30</code> → FINRA publishes ≈ Oct 25 → the value first appears at late-October index rows, never at 2024-09-30 — a model predicting October returns with margin debt sees only what was public at the time.</p>
+<p><strong>Path 2 — vintage first release.</strong> The 8 revision-prone series (CPI / M2 / Core PCE + the NFCI family ×5) skip fixed lags entirely: the <em>first-release</em> value enters at its true <code>effective_date</code> (ALFRED <code>realtime_start</code>). Concrete timeline (CPI): the June figure is first published by the BLS in mid-July → the panel carries that first print at its actual mid-July release date, and later revisions never overwrite it. See <a href="#10-vintage-path">§10</a>.</p>
+<p><strong>Then, transforms.</strong> <code>apply_transforms(mode='fm')</code> computes contemporaneous changes (diff / diff_bps / pct1m / yoy) on the PIT-aligned panel — alignment first, transforms second, so no change is computed across un-shifted dates.</p>
+<p>The <code>transformed</code> (un-lagged MON panel) shows the same values at their original reference dates. <strong>The two files must never be mixed.</strong></p>
+<h3 id="41-cross-market-timezone-adjustment-us-tw-use">4.1 Cross-market timezone adjustment (US → TW use) ⭐</h3>
+<p>The PIT semantics in <a href="#4-pit-semantics-recap">§4</a> are <strong>canonically US-perspective</strong> — <code>pit_align()</code> shifts each US series forward by its US-side publication lag, so the shifted index represents "earliest date a US trader at NY close would have known the value."</p>
+<p><strong>For Taiwan-equity Fama-MacBeth use, an additional 1-business-day shift is required</strong> because TW trading hours close (~05:30 UTC) systematically precede the same-calendar-day US morning publication window (~12:00–14:00 UTC).</p>
+<h4 id="why-the-extra-day">Why the extra day?</h4>
+<p>Concrete example — SOFR for original date 2024-08-28:
+- Config: <code>publication_lag = 1</code> → <code>pit_align()</code> shifts the value to index 2024-08-29
+- This index represents "available at NY close 2024-08-29"
+- NY Fed publication time: 2024-08-29 08:00 ET = 12:00 UTC = Taipei 20:00 on 2024-08-29
+- TW close on 2024-08-29: 05:30 UTC = Taipei 13:30 → SOFR for 2024-08-28 is <strong>not yet published</strong>
+- TW close on 2024-08-30 (next business day): 05:30 UTC → SOFR for 2024-08-28 <strong>is published</strong> (Taipei yesterday evening)</p>
+<p><strong>So for a TW trader at TW close on date <code>t</code>, the latest available US daily series is the pit-aligned value at index <code>(t − 1 business day)</code></strong>, not <code>(t)</code>.</p>
+<h4 id="scope-of-impact">Scope of impact</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Series cadence</th>
+<th>US-side lag</th>
+<th>Extra TW shift</th>
+<th>Net leak if not corrected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Daily (SOFR, DGS10, VIX, DEXTAUS, OAS, SP500)</td>
+<td>1</td>
+<td><strong>+1 BDay</strong></td>
+<td><strong>1 day leak at every month-end</strong></td>
+</tr>
+<tr>
+<td>Weekly (WALCL, WDTGAL)</td>
+<td>1</td>
+<td>+1 BDay (negligible)</td>
+<td>~1/5 of pub cycle</td>
+</tr>
+<tr>
+<td>Monthly (FINRA; CPI / M2 / PCE via vintage first-release, <a href="#10-vintage-path">§10</a>)</td>
+<td>25–58</td>
+<td>+1 BDay (negligible)</td>
+<td>&lt;10% of pub lag</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The daily-series row is the only one that matters for monthly Fama-MacBeth</strong>, but it affects every month-end factor value computed from daily inputs (SOFR-EFFR spread, HY OAS diff, FX return, VIX level, SPX return, etc).</p>
+<h4 id="implementation">Implementation</h4>
+<p>Apply the shift <strong>at merge time</strong> in the equity panel-build code — <em>do not</em> modify <code>pit_safe.py</code> (which stays canonical US-perspective for general consumers):</p>
+<pre><code class="language-python"># Load US-perspective features
+macro = pd.read_parquet('output/macro_panel_features.parquet')
+
+# Cross-market shift: TW trader at TW close on date t can use US values
+# whose pit-aligned index is at (t − 1 business day)
+macro.index = macro.index + pd.tseries.offsets.BDay(1)
+
+# NOW resample to month-end — the shift propagates correctly through .last()
+macro_m = macro.resample('ME').last()
+</code></pre>
+<p>After this shift, <code>macro_m.loc['2024-08-30']</code> returns values that were definitely published by NY close on 2024-08-29 — well before TW close on 2024-08-30. <strong>Zero look-ahead from TW perspective</strong>.</p>
+<h4 id="why-shift-not-built-into-pit_safepy">Why the shift is not built into <code>pit_safe.py</code>?</h4>
+<p>Three reasons:
+1. <strong>Layer separation</strong>: <code>pit_safe.py</code> handles series-level publication lag (US-side); cross-market timing is a merge-time concern. Keeping them separate makes each layer auditable in isolation.
+2. <strong>Consumer flexibility</strong>: a US-side consumer of the features parquet should <em>not</em> get an extra +1 day shift built in.
+3. <strong>Generality</strong>: the +1 BDay rule applies only when LHS is TW equities. If LHS were US equities, no shift is needed; if LHS were European equities, the shift magnitude/direction would differ (timezone-specific).</p>
+<p><strong>The +1 BDay shift lives at the merge-code level</strong> and is documented here for whoever rebuilds the equity panel.</p>
+<p><strong>Executed variant (companion equity repo).</strong> The companion repo's notebooks do not consume the daily features parquet; they read <code>macro_panel_pit.parquet</code> (PIT levels) and perform an explicit month-end as-of join — <code>merge_asof(direction='backward', allow_exact_matches=False)</code> — computing monthly changes downstream. The strict inequality means "take the last value available <em>before</em> month-end, excluding month-end itself": the 2024-08-30 row joins the last value dated ≤ 2024-08-29. Because a Taiwan close always precedes a same-day US release, that inequality alone guarantees zero look-ahead — no +1 BDay needed on that route. The recipe above serves consumers who take the daily features parquet directly.</p>
+<h4 id="cross-market-design-summary">Design rationale — summary</h4>
+<p>How the pipeline handles the US–TW timezone offset, in one paragraph:</p>
+<blockquote>
+<p>Our <code>pit_safe.py</code> is canonically US-perspective — each US series is shifted by its US-side publication lag, producing 'available at NY close' semantics. For the TW equity Fama-MacBeth panel, we apply an additional +1 business day shift at merge time, since TW close (05:30 UTC) precedes US morning publication by ~7-8 hours. This is layer-separated by design: series-level PIT in <code>pit_safe</code>, cross-market timing at merge. After the shift, every month-end factor value is provably knowable at the corresponding TW close.</p>
+</blockquote>
+<hr />
+<h2 id="5-sparsity-resampling">5. Sparsity &amp; resampling</h2>
+<p>Non-null counts in the parquet are the <strong>raw</strong> non-nulls — i.e. the number of dates on which the source actually changed. After PIT shift but <strong>before</strong> any ffill in downstream code, monthly and quarterly series will read NaN on most business days.</p>
+<p><strong>Downstream pattern for monthly Fama-MacBeth</strong>:</p>
+<pre><code class="language-python">import pandas as pd
+
+# 1. Read features (PIT-aligned)
+macro = pd.read_parquet('output/macro_panel_features.parquet')
+
+# 2. Pick columns of interest
+cols = [
+    'SOFR', 'EFFR',                            # repo spread inputs
+    'BAMLH0A0HYM2', 'BAMLH0A0HYM2_diff_bps',   # HY credit (FM form: Δ bps)
+    'NFCILEVERAGE',                            # leverage gauge
+    'WALCL', 'WDTGAL', 'RRPONTSYD',            # Net Liquidity components
+    'DEXTAUS', 'DEXTAUS_pct1m',                # FX
+]
+macro = macro[cols]
+
+# 3. Forward-fill the sparse series onto the business-day grid
+#    (safe because the PIT shift has already moved each value to its
+#    first-known date; ffill only propagates a known value forward)
+macro = macro.ffill()
+
+# 4. Build derived features at the DAILY level first
+macro['SOFR_EFFR_bps']    = (macro['SOFR'] - macro['EFFR']) * 100
+macro['NET_LIQUIDITY']    = macro['WALCL'] - macro['WDTGAL'] - macro['RRPONTSYD']
+
+# 5a. Cross-market shift (US → TW): see §4.1
+#     This is the difference between US-perspective and TW-perspective PIT.
+macro.index = macro.index + pd.tseries.offsets.BDay(1)
+
+# 5b. Resample to month-end
+macro_m = macro.resample('ME').last()
+
+# 6. Compute month-over-month CHANGES for level series → factor-style returns
+macro_m['HY_OAS_d_bps']       = macro_m['BAMLH0A0HYM2'].diff() * 100
+macro_m['NET_LIQ_d_pct']      = macro_m['NET_LIQUIDITY'].pct_change() * 100
+macro_m['NFCI_LEV_d']         = macro_m['NFCILEVERAGE'].diff()
+# DEXTAUS_pct1m is already a 21-bday return — at month-end it is ~MoM FX return
+macro_m['FX_pct1m']           = macro_m['DEXTAUS_pct1m']
+
+# 7. Merge to Taiwan equity monthly panel on month-end key
+#    (equity_panel: MultiIndex [date, stock_id], columns include r_next, r_excess, etc.)
+panel = equity_panel.join(macro_m, on='date', how='inner')
+</code></pre>
+<p><strong>Calendar choice</strong>: Use <strong><code>pd.tseries.offsets.MonthEnd</code></strong> (i.e. <code>'ME'</code> frequency string) so both US-side macro and the TW equity panel align to the same Friday/last-business-day. If TWSE has a holiday that NYSE doesn't (or vice versa), step (3) ffill before resample handles it without leaking.</p>
+<p><strong>Boundary rule (US-perspective)</strong>: A factor value at month-end <code>t</code> is used to predict equity returns over month <code>t+1</code>. The features parquet's PIT shift guarantees the value at <code>t</code> is something a trader at <strong>NY close on date <code>t</code></strong> would have known.</p>
+<p><strong>Boundary rule (TW-perspective, see <a href="#41-cross-market-timezone-adjustment-us-tw-use">§4.1</a>)</strong>: With the additional <code>+1 BDay</code> shift applied at merge time, the value at <code>t</code> is something a trader at <strong>TW close on date <code>t</code></strong> would have known — strictly correct for Taiwan equity panels.</p>
+<hr />
+<h2 id="6-fx-factor-specifics-dextaus">6. FX factor specifics (DEXTAUS)</h2>
+<p>The FX block is central to the Macro RHS pricing test — the liquidity-injections → forward-equity-risk-premia hypothesis needs an FX transmission channel. <code>DEXTAUS</code> is also the only series whose configured lag is set earlier than its upstream archiving cadence — information time T+1 against the H.10 weekly median of T+5, the +4 in the residuals table, by design. Every other divergence runs the opposite way, a −1 strictly-prior conservative day, while <code>DTWEXEMEGS</code> is configured at 5, matching the cadence, gap 0. Together with the λ_FX sign convention driving FM interpretation, the series gets a dedicated section.</p>
+<p><strong>Column meanings</strong>:
+- <code>DEXTAUS</code> — raw spot rate, <strong>TWD per USD</strong> (so rising = TWD weakening). FRED H.10 NY 12pm noon buying rate; config lag T+1 by information time — a traded spot is market-observable on its date; H.10's weekly posting is archival (see <a href="#101-scope-one-cut-rule">§10.1</a>).
+- <code>DEXTAUS_pct1m</code> — 21-business-day percentage change. <strong>This is the FX return</strong> for use as an RHS factor.</p>
+<p><strong>Sign convention for interpretation</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>DEXTAUS_pct1m</code></th>
+<th>TWD direction</th>
+<th>Foreign capital flow proxy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&gt; 0</td>
+<td>TWD weakening</td>
+<td>Outflow / risk-off</td>
+</tr>
+<tr>
+<td>&lt; 0</td>
+<td>TWD strengthening</td>
+<td>Inflow / risk-on</td>
+</tr>
+</tbody>
+</table></div>
+<p>For Fama-MacBeth, <code>DEXTAUS_pct1m</code> works directly as an RHS factor. Expected sign on cross-sectional <code>λ_FX</code> is <strong>negative</strong> if TWD strengthening predicts higher next-month Taiwan equity returns (the "carry / inflow" interpretation), but a hypothesis test does not assume the sign — let the data speak.</p>
+<p><strong>Important nuance</strong> — the 21-bday window of <code>pct_change_1m</code> does not align perfectly to calendar months. At month-end, the value reflects the FX return from ~21 bdays ago, which is approximately one calendar month but not exactly. For tighter alignment, recompute manually:</p>
+<pre><code class="language-python">fx_monthly = macro_m['DEXTAUS'].pct_change() * 100   # exact MoM at month-end
+</code></pre>
+<p>For the monthly panel, prefer this recomputed version over the precomputed <code>DEXTAUS_pct1m</code> to keep the time alignment crisp.</p>
+<hr />
+<h2 id="7-provenance-and-limitations">7. Data provenance &amp; current limitations</h2>
+<h3 id="71-credit-oas-deep-history">7.1 Credit OAS deep history — provenance &amp; reproducibility</h3>
+<p>The five ICE BofA OAS series are distributed on FRED under ICE licensing; since <strong>April 2026</strong> the live API returns only a rolling <strong>~3-year window</strong> for them. The deep history in this repo's cache comes from the <strong>official FRED full-history download</strong>, obtained while the full history was still publicly distributed, and is <strong>programmatically spliced</strong> with live increments:</p>
+<ul>
+<li><code>fred_loader.fetch_one</code>'s full path uses <strong>accumulate-and-merge</strong> (<code>combine_first</code>): fresh values win where present; cached deep history survives wherever the API window has rolled off. No hardcoded protection list — self-healing by construction.</li>
+<li><code>main.py</code>'s <strong>build-time coverage guard</strong> refuses to write the features parquet if any protected deep-history series falls below its coverage floor (first-valid-date / non-NaN count), so a washed splice can never silently reach consumers.</li>
+</ul>
+<p><strong>Net effect for consumers</strong>: the output parquet carries the full OAS history end-to-end; nothing was hand-assembled, and the splice is reproducible from the archived official download + the live API.</p>
+<h3 id="72-retired-upstream-series">7.2 BGCR (not distributed by FRED)</h3>
+<p><code>BGCR</code> — the NY Fed's broad general-collateral repo benchmark — is absent because FRED does not distribute the series. Tri-party GC repo conditions are covered by <code>TGCRRATE</code> and <code>SOFR</code> (Block 1).</p>
+<h3 id="73-sp500-price-index">7.3 SP500 is a price index (reference only)</h3>
+<p>The FRED <code>SP500</code> series is a <strong>price</strong> index. It is carried for regime context / conditioning, <strong>not</strong> as an equity-return benchmark — pricing tests should use a total-return index on the equity side.</p>
+<h3 id="74-cftc-holiday-calendar">7.4 CFTC holiday-calendar nuance</h3>
+<p>CFTC TFF release-date shifting uses <code>USFederalHolidayCalendar</code>, not an NYSE-specific calendar. The difference is minimal at weekly cadence; documented for completeness.</p>
+<hr />
+<h2 id="8-end-to-end-usage-example-macro-rhs-pre-flight">8. End-to-end usage example (Macro RHS pre-flight)</h2>
+<p><em>Same semantics as the companion repo's executed variant (<a href="#41-cross-market-timezone-adjustment-us-tw-use">§4.1</a>).</em></p>
+<pre><code class="language-python">import pandas as pd
+import statsmodels.api as sm
+
+# === A. Load PIT-aligned macro features ===
+macro = pd.read_parquet('output/macro_panel_features.parquet')
+
+# === B. Build clean monthly macro factor panel ===
+keep = ['SOFR', 'EFFR', 'BAMLH0A0HYM2', 'NFCILEVERAGE',
+        'WALCL', 'WDTGAL', 'RRPONTSYD', 'DEXTAUS']
+macro = macro[keep].ffill()
+
+macro['SOFR_EFFR_bps']  = (macro['SOFR'] - macro['EFFR']) * 100
+macro['NET_LIQUIDITY']  = macro['WALCL'] - macro['WDTGAL'] - macro['RRPONTSYD']
+
+# Cross-market PIT shift for TW panel (see §4.1)
+macro.index = macro.index + pd.tseries.offsets.BDay(1)
+
+macro_m = macro.resample('ME').last()
+
+factor_panel = pd.DataFrame(index=macro_m.index)
+factor_panel['REPO_SPREAD']    = macro_m['SOFR_EFFR_bps']
+factor_panel['HY_OAS_d_bps']   = macro_m['BAMLH0A0HYM2'].diff() * 100
+factor_panel['NFCI_LEV_d']     = macro_m['NFCILEVERAGE'].diff()
+factor_panel['NET_LIQ_d_pct']  = macro_m['NET_LIQUIDITY'].pct_change() * 100
+factor_panel['FX_pct1m']       = macro_m['DEXTAUS'].pct_change() * 100
+
+# === C. Sanity-check no look-ahead at sample boundary ===
+# A factor value dated 2025-01-31 should only use info knowable by NY close 2025-01-31.
+print(factor_panel.loc['2025-01-31'])
+
+# === D. Pre-flight collinearity check (VIF) before Fama-MacBeth ===
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+X = factor_panel.dropna()
+X_const = sm.add_constant(X)
+vif = pd.Series(
+    [variance_inflation_factor(X_const.values, i) for i in range(X_const.shape[1])],
+    index=X_const.columns,
+)
+print(vif)
+</code></pre>
+<p>VIF &gt; 10 on any pair would suggest dropping or orthogonalizing. The expected concern is <code>REPO_SPREAD</code> vs <code>NFCI_LEV_d</code> (both pick up funding stress); <code>HY_OAS_d</code> vs <code>NET_LIQ_d</code> (liquidity drives credit — spreads widen when Net Liquidity contracts, so monthly changes are expected to correlate negatively). Document whichever is dropped in the methodology write-up — the companion repo's selection methodology is the executed version of exactly this check.</p>
+<hr />
+<h2 id="9-forward-notes-for-consumers">9. Forward notes for consumers</h2>
+<ul>
+<li><strong>No prebuilt Net-Liquidity column.</strong> The parquet ships the three components separately (<code>WALCL / WDTGAL / RRPONTSYD</code>) because unit conventions for ON-RRP and the TGA differ across shops — composing downstream keeps the exact definition auditable; the one-liner is in <a href="#8-end-to-end-usage-example-macro-rhs-pre-flight">§8</a>.</li>
+<li><strong>Cite official release calendars, not config constants.</strong> <code>config</code> lags are engineering calibrations — validated against the ALFRED sweep for daily/weekly series, replaced by the first-release route for monthly macro (<a href="#10-vintage-path">§10</a>). A formal write-up should reference the BLS / Fed calendars.</li>
+<li><strong>No z-scores in the parquet</strong> (composite or per-series). If a windowed feature is needed — e.g. a Net-Liquidity z-score — compute it downstream with <code>rolling_zscore(NET_LIQUIDITY, 252, lag=1)</code>; it enters <code>config</code> only if it becomes a standing RHS factor.</li>
+<li><strong>CFTC TFF is registered.</strong> Leveraged-fund net UST positioning (<code>TFF_2Y/10Y_LEVERAGED</code>) rides the same features route as the FRED series and doubles as the dealer balance-sheet-capacity narrative.</li>
+</ul>
+<hr />
+<h2 id="10-vintage-path">10. Vintage path (first-release) — design &amp; evidence</h2>
+<h3 id="101-scope-one-cut-rule">10.1 Scope &amp; one-cut rule</h3>
+<p><strong>Vintage treatment is selective by design, not blanket.</strong></p>
+<p><strong>What the lag field means.</strong> It encodes information time — when a value becomes knowable. Market-priced series are knowable on their market date (config carries a 0–1 day strictly-prior buffer); calculated releases are knowable at their publication time; revision-prone statistical releases fit no fixed lag at all and take the vintage route instead.</p>
+<p><strong>Empirical basis (ALFRED sweep).</strong> The sweep confirms the fixed-lag registry against this standard: publication-timed series show residuals of ≈ 0–1 day (per-series table below). The real gap sits at revision-prone levels × long publication delays — CPI ≈ 42 days, M2 ≈ 55, PCEPILFE ≈ 58 (medians over 49 releases each). No fixed lag can represent those delays, so the three monthly series take the first-release route.</p>
+<p><strong>Why the NFCI family joins them.</strong> The criterion is revision risk, not delay: the Chicago Fed restates history retroactively — first-release vs latest-vintage ANFCI diverges by 0.468 (material; archived 2026-05 calibration, not shipped, reproducible from the vintage loader + the live ALFRED API). The sweep csv's <code>vintage_now</code> column marks only the three monthly series; NFCI's vintage assignment rests on revision risk rather than measured availability delay (listed NO-recent-period).</p>
+<p><strong>The control case (<code>DTWEXEMEGS</code>).</strong> It revises frequently in ALFRED (index re-weighting; 87.8% of vintages) yet its lag is calibrated exactly (config = 5, gap 0), so it stays on the fixed-lag path as Tier-2 robustness — the selectivity criterion is <em>divergence</em>, not revision per se.</p>
+<p><strong>One-cut rule.</strong> The vintage / fixed split is decided once in the registry — revision-prone series (the 8 above) take the first-release route regardless of consumer; every other series, including the FM-reach ones, keeps its calibrated standard lag (29 FRED series). Blanket vintage would add cache footprint with zero PIT benefit on the already-calibrated daily/weekly set.</p>
+<p><strong>Per-series calibration residuals (ALFRED sweep)</strong> — the underlying series feeding the factor-selection candidates. Gap = ALFRED median first-appearance − configured lag (<em>negative = conservative</em>: the config treats data as available later than it actually is, zero look-ahead by construction; <em>positive = aggressive</em>). Configured lags are read from <code>config.Indicator.lag</code>, the single source the pipeline itself uses:</p>
+<table><thead><tr><th>Series</th><th>Freq</th><th>Config lag</th><th>ALFRED median</th><th>Gap</th><th>Revised</th><th>Read</th></tr></thead><tbody>
+<tr><td>SOFR · EFFR</td><td>D</td><td>T+1</td><td>T+1</td><td>0</td><td>0%</td><td>exact</td></tr>
+<tr><td>WALCL · WDTGAL</td><td>W (H.4.1)</td><td>T+1</td><td>T+1</td><td>0</td><td>0%</td><td>exact</td></tr>
+<tr><td>RRPONTSYD · BAMLH0A0HYM2 · VIXCLS</td><td>D</td><td>T+1</td><td>T+0</td><td>−1</td><td>0%</td><td>conservative by 1 day</td></tr>
+<tr><td>T10Y2Y</td><td>D</td><td>T+0</td><td>T+0</td><td>0</td><td>0%</td><td>exact</td></tr>
+<tr><td><strong>DEXTAUS</strong></td><td>D (H.10, posted weekly)</td><td>T+1</td><td>T+5</td><td><strong>+4</strong></td><td>0%</td><td><strong>by design — information time</strong>: a traded spot rate is market-observable on its date; the +4 measures H.10's weekly archiving cadence, not information availability (contrast <code>DTWEXEMEGS</code>, a compiled index that does not exist before publication → lag=5)</td></tr>
+</tbody></table>
+<p>Two further bounds hold regardless: every series above shows <strong>revised_pct = 0</strong> in ALFRED (market and Fed quotes do not revise — first release equals latest, so there is no value-revision risk on this path), and consumption is monthly, so any availability offset can only touch month-boundary observations.</p>
+<p>Two candidate inputs are absent from this table by design: <code>NFCILEVERAGE</code> and <code>PCEPILFE</code> travel the <strong>vintage path</strong> — their first releases are read directly from ALFRED rather than approximated by a fixed lag — which is a stronger point-in-time guarantee than any calibrated offset, and is therefore not measured by this fixed-lag sweep. One monitoring-only series, <code>TGCRRATE</code>, reports an implausibly large median (473 days); it carries no configured lag and never reaches the factor model. Verified: ALFRED's earliest vintage for this id is <strong>2025-10-17</strong> (series data start 2018-04-02) — every observation predating it first appears at archive inception, so the figure measures ALFRED archive start, not publication delay. This table is the calibration record referenced by downstream consumers (e.g. the equity repo's factor-selection methodology, <a href="https://lauren-shih.github.io/taiwan-equity-cross-section/02_Macro_Factor_Selection_Methodology.html#s9">§9</a>).</p>
+
+
+<p style="font-size:12px;color:#999">Source: <code>src/alfred_sweep.py</code> · <code>results/sweep_alfred.csv</code>. The z-score window assignment on the monitoring layer (expanding vs rolling) is decided by <code>src/adf_check.py</code> · <code>results/adf_summary.csv</code>.</p>
+
+
+<h3 id="102-first-release-vs-lag-shifted">10.2 First-release vs lag-shifted — evidence</h3>
+<p>Quantified on N=100 month-end query dates (CPI &amp; M2; yoy valid N=88 after the 12-month base warm-up):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Metric</th><th>CPIAUCSL</th><th>M2SL</th></tr></thead>
+<tbody>
+<tr><td>Level median rel diff (first-release vs lag-shifted)</td><td><strong>−0.18%</strong></td><td><strong>−0.14%</strong></td></tr>
+<tr><td>YoY median abs diff</td><td>0.25 pp</td><td>0.51 pp</td></tr>
+<tr><td>YoY max abs diff</td><td><strong>1.48 pp</strong> (2021-04, COVID base effect)</td><td><strong>5.94 pp</strong> (2020-04, COVID stimulus revision)</td></tr>
+<tr><td>Sign asymmetry (yoy)</td><td>first-release &lt; revised in 50/88 (56.8%) — Croushore-consistent upward-revision tendency</td><td>first-release &gt; revised in 48/88 (54.5%) — opposite, weaker (SA-factor mechanism)</td></tr>
+</tbody>
+</table></div>
+<p><em>Provenance: archived calibration run (2026-05; N = 100 month-end query dates). The record is not shipped in <code>results/</code> — reproducible from the first-release panels (<code>src/fred_loader_vintage.py</code>) against the live-API lag-shifted series.</em></p>
+<p><strong>Read</strong>: the typical difference is small (~0.2–0.5 pp YoY), but <strong>the tails are not innocuous</strong> — the 2021-04 CPI base effect and the 2020-04 M2 stimulus revision diverge by 1–6 pp, material for a Fed-reaction-function regression at monthly frequency.
+⚠️ When the baseline value crosses zero, <em>relative</em> yoy differences explode meaninglessly — <strong>always cite absolute pp differences</strong> for yoy comparisons.</p>
+<h3 id="103-mechanics">10.3 Mechanics &amp; consumer impact</h3>
+<p>FRED-native <code>output_type=4</code> (Initial Release Only) returns one first-release row per data date with its true <code>realtime_start</code>. <code>pit_safe_vintage.extract_first_release</code> (explicit stable sort + <code>drop_duplicates</code>, PIT invariant asserted) and <code>pit_align_vintage</code> (<code>merge_asof(direction='backward')</code>) align these onto the business-day grid as <strong>levels</strong>. All FM transforms are then computed by the <em>same</em> <code>apply_transforms(mode='fm')</code> as standard series — single transform source.</p>
+<p><strong>Consumer impact: none.</strong> Vintage series appear in <code>macro_panel_features.parquet</code> as ordinary columns (level + declared transforms) — no special code path is needed downstream. Module details live in the docstrings of <code>src/fred_loader_vintage.py</code> and <code>src/pit_safe_vintage.py</code>.</p>
+<hr />
+<h2 id="11-downstream">11. Downstream: factor selection &amp; DB warehouse</h2>
+<h3 id="111-factor-selection">11.1 Which columns enter a pricing panel?</h3>
+<p>This spec defines <em>mechanical</em> consumption of the parquet; it deliberately does <strong>not</strong> decide which indicators belong in a priced RHS panel. That is a <strong>selection methodology</strong> question — layered screening (economic thesis → univariate IC → pairwise collinearity), with selection kept separate from estimation for out-of-sample validity. The executed variant for the Taiwan cross-section lives in <code>Macro_Factor_Selection_Methodology</code> in the companion <strong>factor-model repo</strong>, alongside the notebooks that consume the pipeline's PIT panel (<code>macro_panel_pit.parquet</code>) via a strict as-of join — see <a href="#41-cross-market-timezone-adjustment-us-tw-use">§4.1</a>, executed variant.</p>
+<h3 id="112-db-warehouse">11.2 DB warehouse context (planned ingest)</h3>
+<p>A planned ingest layer lands both domains in one SQLite warehouse (<code>quant_research</code>, SQLite), so factor selection and Fama-MacBeth can pull LHS + RHS with a single as-of SQL JOIN:</p>
+<pre><code>quant_research (SQLite)
+├── tej_* (7 tables):              individual-stock daily/monthly, IDs, financials
+├── tej_universe_returns_monthly:  2 LHS labels (equal_weight / cap_weight)
+│                                   ← factor-selection notebook (separate TEJ flow)
+├── macro_panel (long-format):     40 indicators × {level + declared transforms}
+│                                   ← collect_macro_data.ipynb (this pipeline)
+└── macro_panel_indicators:        metadata (block, pit_path, publication_lag)
+</code></pre>
+<p><strong>As-of JOIN pattern</strong>:</p>
+<pre><code class="language-sql">SELECT u.year_month, u.monthly_return, m.value AS rhs_factor
+FROM tej_universe_returns_monthly u
+LEFT JOIN macro_panel m
+    ON m.series_id = 'BAMLH0A0HYM2' AND m.transform = 'diff_bps'
+    AND m.release_date &lt;= date(u.year_month || '-01')  -- as-of guard
+WHERE u.universe_label = 'equal_weight'
+</code></pre>
+<p><strong>SSoT discipline</strong>: <code>macro_panel_features.parquet</code> remains the production SSoT; the DB is a downstream consumer — schema change / migration / corruption cannot affect the pipeline's standalone testability. Full spec: <code>Macro_DB_Ingest_Design</code>.</p>
+<h3 id="116-cftc-tff-release_date-verified-ground-truth">11.3 CFTC TFF release_date — verified ground truth</h3>
+<p>The DB ingest layer computes <code>release_date</code> per 3 source groups; the CFTC TFF group needs explicit ground truth verification (<code>cftc_loader.py</code> tracks Tuesday <code>data_date</code>; release_date is computed at ingest).</p>
+<p><strong>Verified from CFTC.gov + secondary sources</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Verified ground truth</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Data date</td>
+<td>Tuesday (weekly open-interest as-of date)</td>
+</tr>
+<tr>
+<td>Release date</td>
+<td>Friday 3:30 PM Eastern Time (weekly)</td>
+</tr>
+<tr>
+<td>Standard lag</td>
+<td><strong>3 business days</strong> (Tue → Fri)</td>
+</tr>
+<tr>
+<td>Holiday rule</td>
+<td>Monday US federal holiday → data shifts Tue → Wed; Friday holiday → release shifts to Thursday</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Implementation</strong> (in <code>collect_macro_data.ipynb</code> Cell 5):</p>
+<pre><code class="language-python">from pandas.tseries.holiday import USFederalHolidayCalendar
+from pandas.tseries.offsets import CustomBusinessDay
+
+us_bday = CustomBusinessDay(calendar=USFederalHolidayCalendar())
+
+def cftc_tff_release_date(data_date_tuesday):
+    return data_date_tuesday + 3 * us_bday
+</code></pre>
+<p><strong>Source group dispatcher</strong>(3 paths):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Source of release_date</th>
+<th>Series</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. ALFRED VINTAGE_SERIES</td>
+<td><code>realtime_start</code> from <code>cache_vintage/*.parquet</code>(direct ground truth)</td>
+<td>CPI / M2 / PCE + NFCI family ×5</td>
+</tr>
+<tr>
+<td>2. FRED standard fixed-lag</td>
+<td><code>data_date + config.publication_lag</code></td>
+<td>29 daily/weekly indicators</td>
+</tr>
+<tr>
+<td>3. CFTC TFF</td>
+<td><code>data_date + 3 × US business day + holiday adjustment</code></td>
+<td>2 CFTC TFF contracts</td>
+</tr>
+</tbody>
+</table></div>
+<p><em>FINRA margin debt (1 series) follows the standard fixed-lag rule (<code>lag=25</code>) — see Macro_DB_Ingest_Design <a href="03_Macro_DB_Ingest_Design.html#8-limitations">§8</a>.</em></p>
+<hr />
+<p><em>Last updated: 2026-08-13</em></p>
+</div>
+</body>
+</html>

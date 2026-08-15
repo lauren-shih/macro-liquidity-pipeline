@@ -1,0 +1,9 @@
+fredapi>=0.5
+pandas>=2.0
+numpy
+pyarrow
+plotly
+requests
+python-dotenv
+statsmodels
+openpyxl

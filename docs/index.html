@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Macro Liquidity Pipeline — Documentation &amp; Dashboards</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#FAFAF8;color:#1a1a1a;font-family:'Noto Sans TC',-apple-system,sans-serif;font-size:15px;line-height:1.75;padding:0 18px 64px;}
+  .wrap{max-width:900px;margin:0 auto;}
+  .hero{position:relative;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:0 0 14px 14px;padding:34px 34px 26px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+  .hero::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#65A30D,#0D7A5C,#2563EB);border-radius:0 0 0 0;}
+  .hero h1{font-size:26px;font-weight:700;margin:10px 0 8px;letter-spacing:.2px;}
+  .hero .sub{color:#6b6b6b;font-size:14px;line-height:1.7;}
+  .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;margin:10px 8px 0 0;background:#EDF5E0;color:#274D0A;}
+  .tag.t{background:#E1F5EE;color:#065040;} .tag.b{background:#E6F1FB;color:#0B447C;}
+  section{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:26px 30px;margin-bottom:16px;}
+  h2{font-size:18px;font-weight:700;border-bottom:2px solid #65A30D;padding-bottom:8px;margin-bottom:6px;}
+  h2 .no{font-family:'JetBrains Mono',monospace;color:#65A30D;font-size:13px;margin-right:9px;}
+  .lead{color:#6b6b6b;font-size:13.5px;margin:8px 0 16px;}
+  a{color:#0B447C;text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  .item{display:block;border:1px solid rgba(0,0,0,.08);border-left:3px solid #65A30D;border-radius:9px;padding:12px 16px;margin:9px 0;background:#fff;transition:background .12s;}
+  .item:hover{background:#FAFAF8;text-decoration:none;}
+  .item .t{font-weight:700;font-size:14.5px;color:#1a1a1a;}
+  .item .d{font-size:13px;color:#6b6b6b;margin-top:2px;}
+  .item .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:#999;margin-right:8px;}
+  .item.b{border-left-color:#2563EB;} .item.t2{border-left-color:#0D7A5C;} .item.p{border-left-color:#7C3AED;}
+  .item.a{border-left-color:#D97706;} .item.c{border-left-color:#EA580C;}
+  .note{border-left:4px solid #D97706;background:#FEF6E0;color:#6B4F0C;border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:13.5px;}
+  .foot{text-align:center;color:#999;font-size:12px;font-family:'JetBrains Mono',monospace;margin-top:26px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <h1>Macro Liquidity Pipeline</h1>
+    <div class="sub">A point-in-time macro data pipeline: 40 indicators from FRED, CFTC and FINRA, ingested with publication-lag and first-release vintage handling, transformed into two aligned panels — one for monitoring, one as the feature matrix for cross-sectional asset-pricing work.</div>
+    <div>
+      <span class="tag">40 indicators</span>
+      <span class="tag t">PIT-safe, dual path</span>
+      <span class="tag b">9 dashboards</span>
+    </div>
+  </div>
+
+  <section>
+    <h2><span class="no">01</span>Documentation</h2>
+    <p class="lead">Start with Architecture for the system design; Integration is the consumer contract for anyone reading the feature panel downstream.</p>
+
+    <a class="item" href="01_Architecture.html">
+      <div class="t"><span class="n">01</span>Architecture</div>
+      <div class="d">End-to-end design: loaders, the dual point-in-time path (fixed publication lag vs. ALFRED first-release), the two output panels, and where each look-ahead guard sits.</div>
+    </a>
+    <a class="item b" href="02_Integration.html">
+      <div class="t"><span class="n">02</span>Integration — consumer specification</div>
+      <div class="d">What the feature panel guarantees and what it does not: column semantics, alignment rules, per-series lag-calibration residuals, and the known limitations a downstream consumer must read.</div>
+    </a>
+    <a class="item t2" href="03_Macro_DB_Ingest_Design.html">
+      <div class="t"><span class="n">03</span>Macro DB Ingest — design</div>
+      <div class="d">Schema and ingest design for persisting the panel into a relational store, including the source groups, keys and idempotency rules.</div>
+    </a>
+  </section>
+
+  <section>
+    <h2><span class="no">02</span>Dashboards</h2>
+    <p class="lead">Rendered from the canonical monitoring panel, with deep-history series spliced in for the long-window views. The scorecard is the entry point; the numbered panels drill into one channel each.</p>
+
+    <a class="item a" href="dashboards/00_macro_scorecard.html">
+      <div class="t"><span class="n">00</span>Macro State Scorecard</div>
+      <div class="d">Single-page state summary across all monitored channels, with threshold flags. Start here.</div>
+    </a>
+    <a class="item" href="dashboards/01_repo_plumbing.html">
+      <div class="t"><span class="n">01</span>Repo Plumbing Monitor</div>
+      <div class="d">Secured and unsecured overnight rates against the policy corridor, funding spreads, and standing-facility usage.</div>
+    </a>
+    <a class="item" href="dashboards/02_net_liquidity.html">
+      <div class="t"><span class="n">02</span>Liquidity Monitor</div>
+      <div class="d">Central-bank balance sheet, Treasury General Account and reverse repo — the components of net liquidity and their rates of change.</div>
+    </a>
+    <a class="item c" href="dashboards/03-1_credit_stress_hy_oas.html">
+      <div class="t"><span class="n">03-1</span>Credit Stress Monitor — HY OAS (long history)</div>
+      <div class="d">High-yield option-adjusted spread with an expanding Z-score, spliced back to the 1990s so that historical stress episodes are on the same scale.</div>
+    </a>
+    <a class="item c" href="dashboards/03-2_credit_stress_other_oas.html">
+      <div class="t"><span class="n">03-2</span>Credit Stress Monitor — other spreads (short history)</div>
+      <div class="d">Investment-grade, emerging-market high-yield and the CCC-minus-BB quality spread, on rolling Z-scores appropriate to their shorter available history.</div>
+    </a>
+    <a class="item b" href="dashboards/04_yield_curve.html">
+      <div class="t"><span class="n">04</span>Yield Curve &amp; Real Rates Monitor</div>
+      <div class="d">Nominal curve slopes, real yields and breakeven inflation.</div>
+    </a>
+    <a class="item p" href="dashboards/05_fx_vol_inflation.html">
+      <div class="t"><span class="n">05</span>FX, Volatility &amp; Inflation Monitor</div>
+      <div class="d">Dollar crosses, equity volatility, and the inflation series that drive the policy reaction function.</div>
+    </a>
+    <a class="item p" href="dashboards/06_leverage_monitor.html">
+      <div class="t"><span class="n">06</span>Leverage Monitor</div>
+      <div class="d">Financial-conditions leverage sub-indices and margin debt relative to money supply.</div>
+    </a>
+    <a class="item t2" href="dashboards/07_leveraged_funds_basis_trade.html">
+      <div class="t"><span class="n">07</span>Leveraged Funds &amp; Basis Trade Monitor</div>
+      <div class="d">Leveraged-fund net positioning in Treasury futures, read alongside repo funding pressure and valuation — the basis-trade surveillance chain.</div>
+    </a>
+
+    <div class="note">
+      Dashboards are static demonstration snapshots; they are not a live feed. The pipeline itself refreshes incrementally, and the rendering layer is separated from the data layer so that charts can be redrawn without re-fetching.
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">03</span>Source</h2>
+    <p class="lead">Code, tests and the executed results referenced throughout the documentation.</p>
+    <a class="item" href="https://github.com/lauren-shih/macro-liquidity-pipeline">
+      <div class="t">Repository on GitHub</div>
+      <div class="d">Pipeline source under <code>src/</code>, a point-in-time regression test under <code>tests/</code>, and script outputs under <code>results/</code>.</div>
+    </a>
+  </section>
+
+  <div class="foot">Built by Lauren Shih · documentation and dashboards for the macro liquidity pipeline</div>
+</div>
+</body>
+</html>

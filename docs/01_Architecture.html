@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture — Macro Liquidity Pipeline</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root {
+  --bg: #FAFAF8;
+  --card: #FFFFFF;
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --hint: #999;
+  --border: rgba(0,0,0,0.08);
+  --green-bg: #EDF5E0;
+  --green-text: #274D0A;
+  --green-accent: #65A30D;
+  --teal-bg: #E1F5EE;
+  --teal-text: #065040;
+  --teal-accent: #0D7A5C;
+  --blue-bg: #E6F1FB;
+  --blue-text: #0B447C;
+  --blue-accent: #2563EB;
+  --coral-bg: #FAECE7;
+  --coral-text: #702911;
+  --coral-accent: #EA580C;
+  --red-bg: #FCEBEB;
+  --red-text: #791F1F;
+  --red-accent: #DC2626;
+  --amber-bg: #FEF6E0;
+  --amber-text: #6B4F0C;
+  --amber-accent: #D97706;
+  --purple-bg: #EEEDFE;
+  --purple-text: #3B3489;
+  --purple-accent: #7C3AED;
+  --code-bg: #1a1a1a;
+  --code-text: #e8e8e0;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans TC', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  padding: 32px 20px 80px;
+  font-size: 15px;
+}
+.container { max-width: 920px; margin: 0 auto; }
+
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 32px 24px;
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+.header h1 { font-size: 26px; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; }
+.header .subtitle { font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+.header .meta { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.tag {
+  display: inline-block; font-size: 12px;
+  padding: 4px 12px; border-radius: 6px;
+  background: var(--green-bg); color: var(--green-text);
+  font-weight: 500;
+}
+.tag.blue   { background: var(--blue-bg);   color: var(--blue-text); }
+.tag.teal   { background: var(--teal-bg);   color: var(--teal-text); }
+.tag.coral  { background: var(--coral-bg);  color: var(--coral-text); }
+.tag.amber  { background: var(--amber-bg);  color: var(--amber-text); }
+.tag.purple { background: var(--purple-bg); color: var(--purple-text); }
+
+.intro-box {
+  background: #FFF8E1;
+  border: 1px solid #F4D58A;
+  border-radius: 10px;
+  padding: 16px 22px;
+  margin-bottom: 24px;
+  font-size: 13.5px;
+  color: #5C4413;
+}
+.intro-box strong { color: #3D2D08; }
+.intro-box ul { margin: 8px 0 0 22px; }
+.intro-box li { margin-top: 4px; }
+
+section {
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 28px 32px;
+  margin-bottom: 16px;
+}
+section h2 {
+  font-size: 20px; font-weight: 700;
+  margin-bottom: 8px; padding-bottom: 10px;
+  border-bottom: 2px solid var(--green-accent);
+  display: inline-block;
+}
+section .lead { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+section h3 {
+  font-size: 16px; font-weight: 600;
+  margin-top: 24px; margin-bottom: 10px;
+  color: var(--text);
+}
+section h4 {
+  font-size: 14px; font-weight: 600;
+  margin-top: 16px; margin-bottom: 8px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+section p { margin-bottom: 12px; color: var(--text); }
+section ul, section ol { margin-left: 24px; margin-bottom: 12px; }
+section li { margin-bottom: 6px; }
+
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  background: rgba(0,0,0,0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--coral-text);
+}
+pre {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 18px 20px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Consolas', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 12px 0;
+  white-space: pre;
+  tab-size: 4;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: 0;
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+
+/* === Architecture Diagram (HTML/CSS-rendered, replaces ASCII) === */
+.arch-diagram {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 28px 24px;
+  border-radius: 12px;
+  margin: 18px 0;
+  font-family: 'Inter', 'Noto Sans TC', sans-serif;
+}
+.arch-stage-tag {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 10px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.arch-stage-content {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 24px;
+}
+
+.arch-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 6px;
+  padding: 12px 16px;
+  min-width: 200px;
+  max-width: 320px;
+  flex: 1;
+}
+.arch-card.config    { border-left: 3px solid rgba(212,162,80,0.85); }
+.arch-card.loader    { border-left: 3px solid rgba(98,137,173,0.85); }
+.arch-card.transform { border-left: 3px solid rgba(122,153,102,0.85); }
+.arch-card.pit       { border-left: 3px solid rgba(140,122,168,0.85); }
+.arch-card.output    { border-left: 3px solid rgba(95,158,160,0.85); }
+.arch-card.data {
+  border: 1px dashed rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.02);
+}
+.arch-card.placeholder {
+  border: 1px dashed rgba(255,255,255,0.18);
+  background: transparent;
+}
+
+.arch-card-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #f0f0e8;
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.arch-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 11.5px;
+  color: #c0c0b8;
+  line-height: 1.65;
+  font-family: 'JetBrains Mono', monospace;
+}
+.arch-card ul li::before {
+  content: '• ';
+  color: var(--green-accent);
+}
+.arch-card-note {
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+  font-style: italic;
+  margin-top: 4px;
+}
+.arch-card-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255,255,255,0.1);
+  font-size: 11px;
+  color: var(--green-accent);
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+.arch-card-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: #c0c0b8;
+  line-height: 1.65;
+  white-space: pre; overflow-x: auto;
+  margin: 0;
+}
+.arch-card-code .hl {
+  color: var(--amber-accent);
+  font-weight: 700;
+}
+.arch-card-code .anno {
+  color: var(--coral-accent);
+  font-size: 10.5px;
+}
+
+.arch-arrow-down {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0;
+  position: relative;
+}
+.arch-arrow-down::before {
+  content: '';
+  width: 2px;
+  height: 20px;
+  background: rgba(255,255,255,0.3);
+}
+.arch-arrow-down::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid rgba(255,255,255,0.55);
+  margin-top: -1px;
+}
+.arch-arrow-down .arrow-label {
+  position: absolute;
+  left: calc(50% + 18px);
+  top: 50%;
+  transform: translateY(-50%);
+  color: #aaa;
+  font-size: 11px;
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.arch-branch-marker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px;
+  margin: 6px 0;
+  text-align: center;
+}
+.arch-branch-marker .branch-label {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.03);
+}
+.arch-branch-marker .branch-label .name {
+  font-weight: 700;
+  font-size: 12.5px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.arch-branch-marker .branch-label .sub {
+  color: #999;
+  font-size: 11px;
+  margin-top: 3px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.arch-branch-marker .branch-label.dashboard .name { color: rgba(212,162,80,1); }
+.arch-branch-marker .branch-label.ml .name { color: rgba(140,122,168,1); }
+
+.arch-twocol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px;
+  margin-top: 6px;
+}
+.arch-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0; }
+.arch-col .arch-card { max-width: none; }
+.arch-col .arch-card {
+  max-width: none;
+  min-width: 0;
+}
+
+.arch-overlay-wrap {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px dashed rgba(255,255,255,0.15);
+  position: relative;
+}
+.arch-overlay-wrap::before {
+  content: 'OVERLAY ALL';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--code-bg);
+  padding: 0 12px;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #888;
+  letter-spacing: 1px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+@media (max-width: 720px) {
+  .arch-twocol { grid-template-columns: 1fr; gap: 16px; }
+  .arch-branch-marker { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* CPI Timeline component (replaces Part E ASCII) */
+.timeline-wrap {
+  background: var(--code-bg);
+  border-radius: 10px;
+  padding: 28px 24px 20px;
+  margin: 18px 0;
+  color: var(--code-text);
+}
+.timeline-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 18px;
+}
+.timeline-stage {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  position: relative;
+}
+.timeline-bar {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 76px;
+  height: 2px;
+  background: #555;
+}
+.timeline-bar::after {
+  content: '';
+  position: absolute;
+  right: -8px;
+  top: -6px;
+  width: 0;
+  height: 0;
+  border-left: 10px solid #888;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+}
+.tl-event {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+.tl-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8e8e0;
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+}
+.tl-label {
+  font-size: 12px;
+  color: #c9c9c0;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.tl-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--green-accent);
+  border: 3px solid var(--code-bg);
+  margin-bottom: 12px;
+  box-shadow: 0 0 0 2px var(--green-accent);
+}
+.tl-dot.coral { background: var(--coral-accent); box-shadow: 0 0 0 2px var(--coral-accent); }
+.tl-dot.amber { background: var(--amber-accent); box-shadow: 0 0 0 2px var(--amber-accent); }
+.tl-detail {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: #b8b8a8;
+  background: rgba(255,255,255,0.04);
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-left: 3px solid var(--green-accent);
+  line-height: 1.55;
+  text-align: left;
+  width: 88%;
+  min-height: 100px;
+}
+.tl-detail.coral { border-left-color: var(--coral-accent); }
+.tl-detail.amber { border-left-color: var(--amber-accent); }
+.tl-detail strong { color: #fff; }
+.tl-detail .arrow-call { color: var(--green-accent); font-weight: 700; }
+@media (max-width: 720px) {
+  .timeline-stage { grid-template-columns: 1fr; gap: 24px; }
+  .timeline-bar { display: none; }
+  .tl-detail { width: 100%; min-height: auto; }
+}
+
+.callout {
+  border-left: 4px solid var(--green-accent);
+  background: var(--green-bg);
+  padding: 14px 18px;
+  border-radius: 6px;
+  margin: 16px 0;
+  font-size: 14px;
+  color: var(--green-text);
+}
+.callout.info   { border-color: var(--blue-accent);  background: var(--blue-bg);   color: var(--blue-text); }
+.callout.teal   { border-color: var(--teal-accent);  background: var(--teal-bg);   color: var(--teal-text); }
+.callout.purple { border-color: var(--purple-accent);background: var(--purple-bg); color: var(--purple-text); }
+.callout strong { font-weight: 700; }
+
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 600; background: rgba(0,0,0,0.02); color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+td code { font-size: 11px; padding: 1px 5px; }
+
+.toc {
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+.toc h3 {
+  font-size: 14px; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted);
+  margin-bottom: 10px; font-weight: 600;
+}
+.toc ol { list-style: none; margin-left: 0; padding-left: 0; }
+.toc li { font-size: 14px; padding: 4px 0 4px 76px; text-indent: -76px; }
+.toc .tno {
+  color: var(--green-accent);
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  display: inline-block;
+  min-width: 68px;
+  margin-right: 8px;
+  text-indent: 0;
+}
+.toc a { color: var(--text); text-decoration: none; }
+.toc a:hover { color: var(--green-accent); }
+
+/* Module cards for Part C */
+.module-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin: 18px 0;
+}
+.mod-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  background: rgba(0,0,0,0.012);
+  border-left: 4px solid var(--green-accent);
+}
+.mod-card.fetch  { border-left-color: var(--blue-accent); }
+.mod-card.pit    { border-left-color: var(--coral-accent); }
+.mod-card.trans  { border-left-color: var(--teal-accent); }
+.mod-card.dash   { border-left-color: var(--amber-accent); }
+.mod-card.orch   { border-left-color: var(--red-accent); }
+
+.mod-card .mod-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.mod-card .mod-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.mod-card .mod-file {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  background: rgba(0,0,0,0.06);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--coral-text);
+}
+.mod-card .mod-role {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.mod-card .mod-body p { margin-bottom: 8px; font-size: 13.5px; }
+.mod-card .mod-io {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 4px 12px;
+  font-size: 13px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.mod-card .mod-io .label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-top: 2px;
+}
+
+/* Look-ahead comparison box for Part D */
+.lookahead-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 18px 0;
+}
+.la-box {
+  border-radius: 10px;
+  padding: 16px 18px;
+  font-size: 13px;
+}
+.la-box .la-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  opacity: 0.7;
+}
+.la-box .la-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.la-box.type1 { background: var(--coral-bg); color: var(--coral-text); border: 1px solid rgba(234,88,12,0.2); }
+.la-box.type2 { background: var(--purple-bg); color: var(--purple-text); border: 1px solid rgba(124,58,237,0.2); }
+.la-box code { background: rgba(255,255,255,0.5); color: inherit; }
+
+/* Output comparison table */
+.output-compare {
+  background: rgba(0,0,0,0.02);
+  border-radius: 10px;
+  padding: 18px 22px;
+  margin: 18px 0;
+}
+.output-compare table { margin: 0; }
+.output-compare table tbody tr:last-child td { border-bottom: none; }
+
+/* If only one branch existed */
+.what-if {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 14px 0;
+}
+.what-if > div {
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid;
+}
+.what-if .a { background: var(--red-bg);   color: var(--red-text);   border-color: rgba(220,38,38,0.2); }
+.what-if .b { background: var(--amber-bg); color: var(--amber-text); border-color: rgba(217,119,6,0.2); }
+.what-if .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px; opacity: 0.75; }
+
+/* Mermaid centering */
+.mermaid {
+  text-align: center;
+  margin: 18px 0;
+  padding: 18px;
+  background: rgba(0,0,0,0.015);
+  border-radius: 10px;
+}
+
+
+/* Mini sub-steps inside step 3 preview */
+
+@media (max-width: 720px) {
+  body { padding: 16px 12px; }
+  section { padding: 20px 18px; }
+  .lookahead-grid, .what-if { grid-template-columns: 1fr; }
+  .mod-card .mod-io { grid-template-columns: 1fr; }
+}
+.arch-card{min-width:0} .arch-card-title{overflow-wrap:anywhere} .arch-card ul li{overflow-wrap:break-word}
+
+.container a{color:#4D7C0F;text-decoration:none;border-bottom:1px dotted rgba(77,124,15,0.45)}
+.container a:hover{border-bottom-style:solid}
+.arch-diagram a{color:#A3E635;border-bottom-color:rgba(163,230,53,0.45)}
+.arch-card ul li{padding-left:1.15em;text-indent:-1.15em}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+  <h1>Architecture — Macro Liquidity Pipeline</h1>
+  <p class="subtitle">12 core modules · dual PIT path (standard fixed-lag + ALFRED first-release) · dual outputs · PIT-safe by construction</p>
+  <div class="meta">
+    <span class="tag">Macro Liquidity Pipeline</span>
+    <span class="tag blue">system design</span>
+    <span class="tag teal">Last updated 2026-08-13</span>
+  </div>
+</div>
+
+<div class="intro-box">
+  <strong>📋 What this document covers</strong>
+  <ul>
+    <li>The <strong>architecture layer only</strong>: why each module exists and how they connect — internal function logic lives in the module docstrings.</li>
+    <li>Core insight up front: the pipeline runs <strong>two independent look-ahead defenses</strong> (publication timing vs strict-past windows) — <a href="#partD">Part D</a> explains why they are separate mechanisms.</li>
+    <li>Companions: <code>README</code> (production spec) · <code>Integration</code> (consumer contract for the features parquet) · <code>Macro_DB_Ingest_Design</code> (planned warehouse layer).</li>
+  </ul>
+</div>
+
+<div class="toc">
+  <h3>Contents</h3>
+  <ol>
+    <li><span class="tno"><a href="#partA">Part A</a> ·</span><a href="#partA">Full data-flow diagram</a></li>
+    <li><span class="tno"><a href="#partB">Part B</a> ·</span><a href="#partB">End-to-end flowchart</a></li>
+    <li><span class="tno"><a href="#partC">Part C</a> ·</span><a href="#partC">The 12 core modules — why each exists &amp; how they connect</a></li>
+    <li><span class="tno"><a href="#partD">Part D</a> ·</span><a href="#partD">Dual-output design (the core insight)</a></li>
+    <li><span class="tno"><a href="#partE">Part E</a> ·</span><a href="#partE">Worked example — one data point (production path)</a></li>
+  </ol>
+</div>
+
+<!-- ============ Part A ============ -->
+<section id="partA">
+  <h2>Part A · Full data-flow diagram</h2>
+  <p class="lead">The full pipeline stage by stage: <strong>12 core modules</strong>, a dual PIT branch (standard fixed-lag + ALFRED first-release), and two independent outputs.</p>
+
+  <div class="arch-diagram">
+
+    <div class="arch-stage-tag">1 · Single source of truth</div>
+    <div class="arch-stage-content">
+      <div class="arch-card config" style="max-width:400px">
+        <div class="arch-card-title">config.py</div>
+        <ul>
+          <li>Indicator dataclass × 40 (9 blocks)</li>
+          <li>ALL_INDICATORS registry · by_source() / get()</li>
+          <li>VINTAGE_SERIES × 8 (CPI / M2 / Core PCE + NFCI family)</li>
+          <li>lag field = publication-lag SSoT (FM-reach only)</li>
+          <li>validate_config(): FM series missing lag → raise at import</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="arch-arrow-down"><span class="arrow-label">imported by every module below</span></div>
+
+    <div class="arch-stage-tag">2 · Data loaders + utility (consume config)</div>
+    <div class="arch-stage-content" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px">
+      <div class="arch-card loader">
+        <div class="arch-card-title">fred_loader.py</div>
+        <ul>
+          <li>29 standard series</li>
+          <li>cache-first + incremental, parallel ×5</li>
+          <li>accumulate-and-merge refresh</li>
+        </ul>
+        <div class="arch-card-footer">&#x2193; pull + incremental</div>
+      </div>
+      <div class="arch-card loader" style="border-left:3px solid #7C3AED">
+        <div class="arch-card-title">fred_loader_vintage.py</div>
+        <ul>
+          <li>8 VINTAGE_SERIES</li>
+          <li>ALFRED first-release (output_type=4)</li>
+          <li>cache-first (cache_vintage/)</li>
+        </ul>
+        <div class="arch-card-footer">&#x2193; pull vintage panels</div>
+      </div>
+      <div class="arch-card loader">
+        <div class="arch-card-title">cftc_loader.py</div>
+        <ul>
+          <li>TFF, 5 contracts</li>
+          <li>Socrata REST</li>
+          <li>cached, fallback-on-failure</li>
+        </ul>
+        <div class="arch-card-footer">&#x2193; pull weekly snapshot</div>
+      </div>
+    </div>
+    <div class="arch-stage-content" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px">
+      <div class="arch-card loader">
+        <div class="arch-card-title">finra_loader.py</div>
+        <ul>
+          <li>FINRA margin debt</li>
+          <li>monthly, lag=25</li>
+          <li>local FINRA workbook (no cache)</li>
+        </ul>
+        <div class="arch-card-footer">&#x2193; pull monthly</div>
+      </div>
+      <div class="arch-card placeholder">
+        <div class="arch-card-title">transformations.py</div>
+        <div class="arch-card-note">passive utility library<br>invoked twice by main.py<br>(mode='mon' / mode='fm')</div>
+      </div>
+    </div>
+
+    <div class="arch-arrow-down"></div>
+
+    <div class="arch-stage-tag">3 · Local cache (quota-friendly, self-healing)</div>
+    <div class="arch-stage-content">
+      <div class="arch-card data" style="max-width:460px">
+        <div class="arch-card-title">cache/ + cache_vintage/ (parquet)</div>
+        <ul>
+          <li>cache/: one parquet per series (FRED + CFTC) — carries the OAS deep-history splice (see Integration <a href="02_Integration.html#71-credit-oas-deep-history">§7.1</a>)</li>
+          <li><span style="color:#C4B5FD">cache_vintage/: 8 vintage panels (realtime_start, date, value)</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="arch-arrow-down"><span class="arrow-label">main.py: concat &#x2192; wide panel</span></div>
+
+    <div class="arch-stage-tag">4 · Raw wide panel</div>
+    <div class="arch-stage-content">
+      <div class="arch-card data" style="max-width:400px">
+        <div class="arch-card-title">macro_panel_raw.parquet</div>
+        <ul>
+          <li>raw levels, mixed daily / weekly / monthly cadence</li>
+          <li>CFTC / FINRA cols join the in-memory panel</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="arch-arrow-down"></div>
+
+    <div class="arch-branch-marker">
+      <div class="branch-label dashboard">
+        <div class="name">[ Monitoring branch ]</div>
+        <div class="sub">keep index date<br>(no publication lag)</div>
+      </div>
+      <div class="branch-label ml">
+        <div class="name">[ Feature branch ]</div>
+        <div class="sub">apply publication lag<br>(strict PIT)</div>
+      </div>
+    </div>
+
+    <div class="arch-twocol">
+
+      <div class="arch-col">
+        <div class="arch-arrow-down"></div>
+        <div class="arch-card transform">
+          <div class="arch-card-title">transformations.py</div>
+<pre class="arch-card-code">apply_transforms(
+    panel,
+    indicators,
+    <span class="hl">mode='mon'</span>  <span class="anno">&#x2190; windows include t</span>
+)</pre>
+        </div>
+        <div class="arch-arrow-down"></div>
+        <div class="arch-card data">
+          <div class="arch-card-title">macro_panel_transformed.parquet</div>
+          <ul>
+            <li>levels + MON transforms (_zscore / _yoy / _pct1m)</li>
+          </ul>
+          <div class="arch-card-footer">&#x2605; single read source for dashboards</div>
+        </div>
+        <div class="arch-arrow-down"></div>
+        <div class="arch-card output">
+          <div class="arch-card-title">rebuild_dashboards.py (+ dashboard.py plot library)</div>
+          <ul>
+            <li>single dashboard builder — one canonical read: the transformed parquet</li>
+            <li>long-window panels self-load fetch_long_* prefetch parquets (curve / FX-vol / leverage)</li>
+          </ul>
+        </div>
+        <div class="arch-arrow-down"></div>
+        <div class="arch-card output">
+          <div class="arch-card-title">output/*.html (9 files)</div>
+          <ul>
+            <li>00_macro_scorecard (front page)</li>
+            <li>01_repo_plumbing</li>
+            <li>02_net_liquidity</li>
+            <li>03-1_credit_stress_hy_oas</li>
+            <li>03-2_credit_stress_other_oas</li>
+            <li>04_yield_curve</li>
+            <li>05_fx_vol_inflation</li>
+            <li>06_leverage_monitor</li>
+            <li>07_leveraged_funds_basis_trade</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="arch-col">
+        <div class="arch-arrow-down"></div>
+        <div class="arch-card pit">
+          <div class="arch-card-title">pit_safe.py (standard fixed-lag)</div>
+          <ul>
+            <li>apply_publication_lag → pit_align (+ ffill)</li>
+            <li>lag_map built from config.Indicator.lag</li>
+            <li>17 FM-reach series (incl. 2 CFTC + FINRA)</li>
+          </ul>
+          <div class="arch-card-footer">Type 1 defense: shift index by publication lag</div>
+        </div>
+        <div class="arch-arrow-down"></div>
+        <div class="arch-card pit" style="border-left:3px solid #7C3AED">
+          <div class="arch-card-title">pit_safe_vintage.py</div>
+          <ul>
+            <li>L1 extract_first_release (stable sort — revision-leak defense)</li>
+            <li>L2 pit_align_vintage (merge_asof backward)</li>
+            <li>L3 first-release <strong>levels only</strong> — transforms happen downstream</li>
+            <li>8 series; true first-release lag ≈ 42 / 55 / 58 days for CPI / M2 / Core PCE; NFCI family retro-revised</li>
+          </ul>
+          <div class="arch-card-footer">Type 1 defense, vintage flavour: true effective_date</div>
+        </div>
+        <div class="arch-arrow-down"></div>
+        <div class="arch-card data">
+          <div class="arch-card-title">macro_panel_pit.parquet</div>
+          <div class="arch-card-note">PIT-aligned levels<br>(standard + vintage + CFTC + FINRA merged)</div>
+        </div>
+        <div class="arch-arrow-down"></div>
+        <div class="arch-card transform">
+          <div class="arch-card-title">transformations.py</div>
+<pre class="arch-card-code">apply_transforms(
+    pit_panel,
+    indicators,
+    <span class="hl">mode='fm'</span>  <span class="anno">&#x2190; contemporaneous changes only</span>
+)</pre>
+        </div>
+        <div class="arch-arrow-down"></div>
+        <div class="arch-card data">
+          <div class="arch-card-title">macro_panel_features.parquet</div>
+          <ul>
+            <li>PIT levels + FM transforms (_diff / _diff_bps / _pct1m / _yoy)</li>
+            <li>guarded by a build-time coverage check (deep-history floors) before write</li>
+          </ul>
+          <div class="arch-card-footer">&#x2605; for factor-model consumers (Fama-MacBeth; ML-ready)</div>
+        </div>
+        <div class="arch-arrow-down"></div>
+        <div class="arch-card placeholder">
+          <div class="arch-card-title">downstream</div>
+          <div class="arch-card-note">Fama-MacBeth cross-section;<br>ML-ready features</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="arch-overlay-wrap">
+      <div class="arch-stage-content">
+        <div class="arch-card output" style="max-width:520px">
+          <div class="arch-card-title">main.py &middot; pipeline orchestrator</div>
+          <ul>
+            <li>CLI: --start, --refresh, --skip-fetch, --skip-cftc</li>
+            <li>invokes every module above; the DB ingest notebook (planned) runs separately, post-pipeline</li>
+            <li>writes 6 parquet artifacts: raw / cftc_tff / finra / transformed / pit / features</li>
+            <li>build-time coverage guard: a washed deep-history splice aborts the run before the features parquet is written</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="callout info">
+    <strong>&#x1f4d6; Reading guide:</strong>
+    <ul style="margin-top:8px;margin-bottom:0">
+      <li><strong>config.py is the single source of truth</strong>: every module imports it; adding or removing an indicator touches one file. <code>VINTAGE_SERIES</code> decides who takes the ALFRED first-release route.</li>
+      <li><strong>transformations.py is invoked twice</strong> (left <code>mode='mon'</code>, right <code>mode='fm'</code>) — one implementation, two outputs.</li>
+      <li><strong>Dual PIT path on the feature branch</strong>: 17 FM-reach series take the standard fixed lag (calibrated against an ALFRED sweep: median real lag of 0–1 day for rates, credit and balance-sheet series; the two FX series post weekly at ≈5 days — Integration <a href="02_Integration.html#101-scope-one-cut-rule">§10.1</a>); the 8 revision-prone series take true first-release effective dates.</li>
+      <li><strong>Selective, not blanket (one-cut rule)</strong>: only series whose measured first-release gap is material go vintage — an empirical cost-benefit cut, not an assumption.</li>
+      <li><strong>Two parquets coexist by design</strong>: <code>macro_panel_transformed</code> (un-lagged, dashboards show today) vs <code>macro_panel_features</code> (strict PIT for models) — <a href="#partD">Part D</a>.</li>
+      <li><strong>main.py is an overlay</strong>, not a middle layer — it orchestrates call order and owns no computation.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ Part B ============ -->
+<section id="partB">
+  <h2>Part B · End-to-end flowchart</h2>
+  <p class="lead">The full pipeline as one flowchart — node labels match the module files under <code>src/</code> and the parquet artifacts they produce.</p>
+
+<div class="mermaid">
+flowchart TB
+    cfg[config.py<br/>Indicator registry ×40<br/>incl. VINTAGE_SERIES ×8]
+
+    fred[fred_loader.py<br/>cache-first FRED<br/>29 standard series]
+    cftc[cftc_loader.py<br/>CFTC TFF Socrata]
+    finra[finra_loader.py<br/>FINRA margin debt]
+    fred_v[fred_loader_vintage.py<br/>ALFRED first-release<br/>CPI / M2 / Core PCE + NFCI ×5]
+
+    cache[(cache/*.parquet<br/>one parquet per series)]
+    cache_v[(cache_vintage/*.parquet<br/>8 vintage panels)]
+
+    raw[(raw wide panel<br/>macro_panel_raw.parquet<br/>+ CFTC / FINRA cols joined)]
+
+    tf_state[transformations.py<br/>mode='mon']
+    state[(macro_panel_transformed<br/>dashboard source)]
+    rb[rebuild_dashboards.py<br/>+ dashboard.py plot library]
+    html[output/*.html<br/>scorecard + 8 panels]
+
+    longp[(fetch_long_* prefetch<br/>deep-history parquets)]
+
+    pit[pit_safe.py<br/>fixed-lag pit_align<br/>17 FM-reach series]
+    pit_v[pit_safe_vintage.py<br/>first-release levels<br/>merge_asof backward]
+    pit_panel[(macro_panel_pit.parquet<br/>standard + vintage merged)]
+    tf_feat[transformations.py<br/>mode='fm']
+    guard{coverage guard}
+    feat[(macro_panel_features<br/>factor-model feature matrix)]
+
+    db_ingest[collect_macro_data.ipynb<br/>planned DB ingest<br/>melt + release_date dispatcher<br/>vintage dates from cache_vintage/]
+    db_macro[(quant_research SQLite<br/>macro_panel long-format)]
+    tej_src[separate TEJ flow<br/>LHS aggregation]
+    db_tej[(quant_research SQLite<br/>tej_universe_returns_monthly)]
+    ml[factor-selection +<br/>Fama-MacBeth notebooks<br/>SQL JOIN macro × equity]
+
+    cfg --> fred
+    cfg --> cftc
+    cfg --> finra
+    cfg --> fred_v
+    cfg -.->|registry| tf_state
+    cfg -.->|registry| tf_feat
+    fred --> cache
+    cftc --> cache
+    finra --> raw
+    fred_v --> cache_v
+    cache --> raw
+    raw --> tf_state
+    tf_state --> state
+    state --> rb
+    longp -.-> rb
+    rb --> html
+    raw --> pit
+    cache_v --> pit_v
+    pit --> pit_panel
+    pit_v --> pit_panel
+    pit_panel --> guard
+    guard --> tf_feat
+    tf_feat --> feat
+    feat --> db_ingest
+    db_ingest --> db_macro
+    tej_src --> db_tej
+    db_macro --> ml
+    db_tej --> ml
+
+    classDef vintage fill:#f0e8ff,stroke:#7c3aed,color:#3B3489
+    class fred_v,cache_v,pit_v vintage
+    classDef dblayer fill:#e6f7f0,stroke:#0d9488,color:#1a3d36
+    class db_ingest,db_macro,db_tej dblayer
+    classDef extflow fill:#f5f5f0,stroke:#9ca3af,color:#4b5563,stroke-dasharray: 4 3
+    class tej_src extflow
+</div>
+
+  <div class="callout info">
+        <strong>📊 DB layer note</strong> (green nodes): the ingest notebook is a <strong>planned</strong> layer that melts <code>macro_panel_features.parquet</code> into a long-format <code>macro_panel</code> table and looks up first-release dates from <code>cache_vintage/</code>. The grey dashed node (<code>tej_universe_returns_monthly</code>) belongs to a <strong>separate TEJ equity flow</strong>; the two domains meet only at SQL-JOIN time. <strong>The parquet remains the production SSoT</strong>; the DB is a downstream, query-optimized consumer. Full spec: <code>Macro_DB_Ingest_Design</code>.
+  </div>
+</section>
+
+<!-- ============ Part C ============ -->
+<section id="partC">
+  <h2>Part C · The 12 core modules — why each exists &amp; how they connect</h2>
+  <p class="lead">Each card covers only the <strong>reason to exist</strong> and the <strong>upstream / downstream interface</strong> — internal logic lives in the module docstrings. Utility scripts (the <code>fetch_long_*</code> deep-history prefetchers, <code>adf_check.py</code>, <code>alfred_sweep.py</code>) are catalogued in the README repository map. Purple cards are the ALFRED first-release path (8 <code>VINTAGE_SERIES</code>).</p>
+
+  <div class="module-grid">
+
+    <div class="mod-card config">
+      <div class="mod-header"><span class="mod-num">[1]</span><span class="mod-file">config.py</span><span class="mod-role">indicator registry — single source of truth</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: if series ids, transform lists, sources and lags were scattered across loaders / transforms / dashboards, adding an indicator would be painful and "fetched but never transformed" bugs would slip in silently. The frozen dataclass registry centralizes all metadata; <code>validate_config()</code> runs at import (fail at load).</p>
+        <div class="mod-io"><span class="label">Up</span><span>none (definition layer)</span><span class="label">Down</span><span><code>by_source('FRED')</code> feeds loaders; <code>apply_transforms</code> reads mon/fm lists; the lag map feeds <code>pit_align</code>.</span></div>
+      </div>
+    </div>
+
+    <div class="mod-card fetch">
+      <div class="mod-header"><span class="mod-num">[2]</span><span class="mod-file">fred_loader.py</span><span class="mod-role">FRED fetch + local cache (standard path, 29 series)</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: FRED quotas are real and the API occasionally fails. Cache-first three-path logic (fresh → read / stale → incremental / missing → full) plus parallel fetch with per-series failure isolation. The full-fetch path uses <strong>accumulate-and-merge</strong> (<code>combine_first</code>): fresh values win, cached deep history survives — the OAS deep-history splice is protected by construction, no hardcoded list (its pre-2023 history is no longer retrievable from the live API after ICE's 2026-04 redistribution change — overwrite it and it is gone; provenance in Integration <a href="02_Integration.html#71-credit-oas-deep-history">§7.1</a>).</p>
+        <div class="mod-io"><span class="label">Up</span><span><code>config.py</code> ids, <code>FRED_API_KEY</code></span><span class="label">Down</span><span><code>cache/*.parquet</code> (one per series)</span></div>
+      </div>
+    </div>
+
+    <div class="mod-card fetch" style="border-left:3px solid #7C3AED;background:#FAFAFE">
+      <div class="mod-header"><span class="mod-num" style="color:#7C3AED">[3]</span><span class="mod-file" style="color:#3B3489">fred_loader_vintage.py</span><span class="mod-role">ALFRED first-release fetch (8 series)</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: fixed lags approximate monthly macro badly — measured first-release lag is ~42 / 55 / 58 days for CPI / M2 / Core PCE (the registry carries <code>lag=None</code> for all three and routes them via ALFRED), and the NFCI family is retroactively revised. Uses FRED-native <code>output_type=4</code> (Initial Release Only) to avoid the ALFRED 100k-row truncation that <code>get_series_all_releases</code> hits on weekly revised series. Scope is <strong>selective</strong>: only the 8 series where the gap is material (one-cut rule).</p>
+        <div class="mod-io"><span class="label">Up</span><span><code>config.VINTAGE_SERIES</code></span><span class="label">Down</span><span><code>cache_vintage/*.parquet</code> (realtime_start, date, value)</span></div>
+      </div>
+    </div>
+
+    <div class="mod-card fetch">
+      <div class="mod-header"><span class="mod-num">[4]</span><span class="mod-file">cftc_loader.py</span><span class="mod-role">CFTC TFF fetch (self-built REST client)</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: FRED does not carry the CFTC Traders-in-Financial-Futures detail (leveraged-fund / asset-manager / dealer net positioning). CFTC has no official Python SDK, so this is a direct Socrata REST client. The column map is <strong>verified against the live Socrata schema</strong> (naming is inconsistent upstream: some groups carry an <code>_all</code> suffix, some do not). Leveraged-fund UST net shorts are the core basis-trade monitoring input.</p>
+        <div class="mod-io"><span class="label">Up</span><span>built-in <code>TFF_CONTRACTS</code> (5 codes)</span><span class="label">Down</span><span><code>cache/cftc_tff_*.parquet</code></span></div>
+      </div>
+    </div>
+
+    <div class="mod-card fetch">
+      <div class="mod-header"><span class="mod-num">[5]</span><span class="mod-file">finra_loader.py</span><span class="mod-role">FINRA margin debt (monthly)</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: retail / levered-equity positioning proxy. Monthly cadence, publication lag ≈ 25 days; the margin-to-M2 composites for the leverage panel are assembled downstream from its level.</p>
+        <div class="mod-io"><span class="label">Up</span><span>FINRA margin statistics workbook (manual download)</span><span class="label">Down</span><span><code>finra_panel.parquet</code> → concatenated into the raw wide panel (feeds both branches)</span></div>
+      </div>
+    </div>
+
+    <div class="mod-card pit">
+      <div class="mod-header"><span class="mod-num">[6]</span><span class="mod-file">pit_safe.py</span><span class="mod-role">standard fixed-lag PIT layer</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: FRED stores values at the <em>reference</em> date, but reality only reveals them at the <em>publication</em> date. <code>pit_align</code> shifts each column's index by its publication lag and re-grids to business days. The lag map comes from <code>config.Indicator.lag</code> (17 FM-reach series; missing lag → hard fail). Daily/weekly lags were validated against an ALFRED sweep (median real lag of 0–1 day for rates, credit and balance-sheet series; the two FX series post weekly at ≈5 days).</p>
+        <div class="mod-io"><span class="label">Up</span><span>raw wide panel columns (FM-reach)</span><span class="label">Down</span><span><code>macro_panel_pit.parquet</code></span></div>
+      </div>
+    </div>
+
+    <div class="mod-card pit" style="border-left:3px solid #7C3AED;background:#FAFAFE">
+      <div class="mod-header"><span class="mod-num" style="color:#7C3AED">[7]</span><span class="mod-file" style="color:#3B3489">pit_safe_vintage.py</span><span class="mod-role">first-release alignment (3 layers)</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: replace the fixed-lag approximation with the true first-release <code>effective_date</code> for the 8 revision-prone series. L1 <code>extract_first_release</code> (explicit stable sort + dedup — a defense against silent revision leakage); L2 <code>pit_align_vintage</code> (<code>merge_asof(direction='backward')</code>, the pandas as-of join idiom); L3 outputs <strong>first-release levels only</strong> — every FM transform is computed downstream by the same <code>apply_transforms</code>, so vintage and standard series share one transform implementation.</p>
+        <div class="mod-io"><span class="label">Up</span><span><code>cache_vintage/*.parquet</code></span><span class="label">Down</span><span>levels merged into <code>macro_panel_pit.parquet</code></span></div>
+      </div>
+    </div>
+
+    <div class="mod-card trans">
+      <div class="mod-header"><span class="mod-num">[8]</span><span class="mod-file">transformations.py</span><span class="mod-role">feature engineering layer</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: raw levels are not cross-comparable (a policy rate in %, an OAS in bps, an index level). Z-scores / YoY / changes convert levels into unit-free signals. Two design keys: <code>mode='mon'</code> vs <code>mode='fm'</code> select per-series transform lists from config; and YoY is <strong>frequency-aware</strong> — series are resampled to native frequency before <code>pct_change</code>, so a forward-filled daily grid can never silently corrupt a monthly YoY.</p>
+        <div class="mod-io"><span class="label">Up</span><span>any wide panel + config registry</span><span class="label">Down</span><span>panel with <code>_zscore / _yoy / _pct1m / _diff / _diff_bps</code> columns</span></div>
+      </div>
+    </div>
+
+    <div class="mod-card dash">
+      <div class="mod-header"><span class="mod-num">[9]</span><span class="mod-file">dashboard.py</span><span class="mod-role">plot library</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: the Plotly figure builders (scorecard + eight thematic panels) live here, imported by the builder script — plotting logic in one place, build orchestration in another.</p>
+        <div class="mod-io"><span class="label">Up</span><span>transformed panel (in memory) + <code>fetch_long_*</code> deep-history parquets (self-loaded by long-window panels)</span><span class="label">Down</span><span>figure objects → HTML files</span></div>
+      </div>
+    </div>
+
+    <div class="mod-card dash">
+      <div class="mod-header"><span class="mod-num">[10]</span><span class="mod-file">rebuild_dashboards.py</span><span class="mod-role">single dashboard builder</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: one script owns dashboard production, making <strong>one canonical pipeline read</strong> (<code>macro_panel_transformed.parquet</code>) and writing the 9 HTML pages — a single builder keeps the scorecard and panels in sync and never <em>writes</em> a parquet. Long-window panels self-load the <code>fetch_long_*</code> deep-history prefetch parquets inside the plot functions.</p>
+        <div class="mod-io"><span class="label">Up</span><span><code>macro_panel_transformed.parquet</code></span><span class="label">Down</span><span><code>output/00…07*.html</code> (9 files)</span></div>
+      </div>
+    </div>
+
+    <div class="mod-card orch">
+      <div class="mod-header"><span class="mod-num">[11]</span><span class="mod-file">main.py</span><span class="mod-role">orchestrator</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: one CLI entry point strings the modules together (<code>--start / --refresh / --skip-fetch / --skip-cftc</code>), writes the 6 parquet artifacts, and enforces the <strong>build-time coverage guard</strong>: if a protected deep-history series falls below its coverage floor, the run aborts before the features parquet is written — a washed splice can never reach consumers.</p>
+        <div class="mod-io"><span class="label">Up/Down</span><span>invokes every module; writes raw / cftc_tff / finra / pit / transformed / features</span></div>
+      </div>
+    </div>
+
+    <div class="mod-card" style="border-left-color:#0d9488">
+      <div class="mod-header"><span class="mod-num" style="color:#0d9488">[12]</span><span class="mod-file">notebooks/collect_macro_data.ipynb</span><span class="mod-role">DB ingest layer (planned)</span></div>
+      <div class="mod-body">
+        <p><strong>Why</strong>: land the macro panel beside the equity warehouse (<code>quant_research</code>, SQLite) so factor selection and Fama-MacBeth pull LHS + RHS with one as-of SQL JOIN. Melts the features parquet to long format and attaches <code>release_date</code> via a three-group dispatcher (ALFRED <code>realtime_start</code> / <code>data_date + config lag</code> / CFTC <code>+3 business days</code> with holiday shifts). <strong>The parquet remains the SSoT</strong>; the DB is a downstream consumer.</p>
+        <div class="mod-io"><span class="label">Up</span><span><code>macro_panel_features.parquet</code> + <code>cache_vintage/</code></span><span class="label">Down</span><span><code>macro_panel</code> + <code>macro_panel_indicators</code> tables</span></div>
+        <p style="font-size:11px;color:var(--text-quiet);margin-top:8px">📎 Full spec: <code>Macro_DB_Ingest_Design</code> + <code>Integration</code> <a href="02_Integration.html#11-downstream">§11</a></p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ Part D ============ -->
+<section id="partD">
+  <h2>Part D · Dual-output design (the core insight)</h2>
+  <p class="lead">The pipeline runs <strong>two independent look-ahead defenses</strong> — and they address different failure modes.</p>
+
+  <div class="lookahead-grid">
+    <div class="la-box type1">
+      <div class="la-label">Look-ahead source · Type 1</div>
+      <div class="la-title">"When could the data actually be seen?"</div>
+      <p><strong>Problem</strong>: timeline misalignment (publication lag) — the reference date ≠ the knowable date.</p>
+      <p><strong>Example</strong>: the September CPI print goes public in mid-October (true first-release lag ≈ 42 days median).</p>
+      <p><strong>Defense (dual path)</strong>: <code>pit_safe.apply_publication_lag</code> for the 17 FM-reach standard series (lags validated by an ALFRED sweep); <code>pit_safe_vintage</code> first-release alignment for the 8 revision-prone series (true ALFRED effective dates).</p>
+    </div>
+
+    <div class="la-box type2">
+      <div class="la-label">Look-ahead source · Type 2</div>
+      <div class="la-title">"Does the statistic peek at t itself?"</div>
+      <p><strong>Problem</strong>: a rolling window that includes t — a z-score whose mean covers [t−251, t] cannot serve as a next-period predictor.</p>
+      <p><strong>Example</strong>: <code>x.rolling(252).mean()</code> used to predict t+1 returns is optimistically biased.</p>
+      <p><strong>Defense</strong>: <code>mode='fm'</code> ships <strong>contemporaneous changes only</strong> (diff / diff_bps / pct1m / yoy) — <strong>no windowed statistic enters the feature matrix</strong>. Z-scores exist only on the monitoring layer, computed at <code>lag=0</code> (window includes t — fine for display; see the table below). The same z implementations carry a <code>lag ≥ 1</code> switch, so any future windowed <em>feature</em> would be strict-past by the same code path.</p>
+    </div>
+  </div>
+
+  <h3>Why two separate outputs?</h3>
+  <div class="output-compare">
+    <table>
+      <thead><tr><th>Output parquet</th><th>Look-ahead defenses</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td><code>macro_panel_transformed</code></td><td>none — deliberately</td><td>Dashboards showing <em>today's</em> z-score (the viewer's clock is today; nothing is leaked)</td></tr>
+        <tr><td><code>macro_panel_features</code></td><td>Type 1 ✓ + Type 2 ✓</td><td>Factor-model RHS / ML-ready macro features (strict PIT)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>What breaks with only one output</h3>
+  <div class="what-if">
+    <div class="a">
+      <div class="label">transformed only (no PIT)</div>
+      <strong>In-sample R² looks great, out-of-sample collapses</strong> — the model has been fed values that were not public yet.
+    </div>
+    <div class="b">
+      <div class="label">features only (strict PIT)</div>
+      <strong>The dashboard permanently lags reality</strong> — today's stress never shows up until its publication lag has passed.
+    </div>
+  </div>
+
+  <div class="callout purple">
+    <strong>🎯 Why the distinction matters:</strong> most look-ahead discussions stop at Type 2 (strict-past windows). Type 1 — publication timing — is the quieter leak, and it needs its own mechanism because no amount of window shifting fixes an index that sits at the wrong date. This pipeline treats the two as separate defenses with separate code paths.
+  </div>
+</section>
+
+<!-- ============ Part E ============ -->
+<section id="partE">
+  <h2>Part E · Worked example — one data point through the production path (September CPI)</h2>
+  <p class="lead"><a href="#partD">Part D</a>'s abstraction, applied to one concrete data point across three moments in time. CPI belongs to <code>VINTAGE_SERIES</code>, so the September 2024 print takes the first-release route: reference date <strong>2024-09-01</strong>, first public release <strong>2024-10-10</strong> (this print: 39 days; median across 49 releases: 42).</p>
+
+  <div class="timeline-wrap">
+    <div class="timeline-title"># Timeline · CPI 2024-09 data point</div>
+    <div class="timeline-stage">
+      <div class="timeline-bar"></div>
+
+      <div class="tl-event">
+        <div class="tl-date">2024-09-01</div>
+        <div class="tl-label"><strong>FRED index date</strong></div>
+        <div class="tl-dot"></div>
+        <div class="tl-detail">September value<br>stored in FRED with<br><strong>index = 2024-09-01</strong></div>
+      </div>
+
+      <div class="tl-event">
+        <div class="tl-date">2024-10-10</div>
+        <div class="tl-label"><strong>BLS publishes</strong></div>
+        <div class="tl-dot coral"></div>
+        <div class="tl-detail coral">the value goes<br>public on FRED<br><strong>first release: realtime_start = 2024-10-10</strong><br>(this print: 39 d; median across 49 releases: 42 d)</div>
+      </div>
+
+      <div class="tl-event">
+        <div class="tl-date">2024-10-12</div>
+        <div class="tl-label"><strong>Pipeline queries at t</strong></div>
+        <div class="tl-dot amber"></div>
+        <div class="tl-detail amber"><strong>Q:</strong> can a model see this<br>CPI value at t = 10-12?<br><span class="arrow-call">pit_align_vintage:</span><br>the value enters the panel at its<br><strong>realtime_start = 2024-10-10</strong><br><br><code style="color:#c3e88d;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:3px">asof(2024-10-12)</code><br>finds latest value ≤ t → visible ✓<br>(a query at 2024-09-30 would not)</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>What happens in code</h3>
+  <ul style="margin-top:4px">
+    <li><code>fred_loader_vintage.fetch_vintage('CPIAUCSL')</code> → vintage panel (realtime_start, date, value)</li>
+    <li><code>extract_first_release()</code> → true first release for the September reference date: <code>realtime_start = 2024-10-10</code></li>
+    <li><code>pit_align_vintage()</code> — <code>merge_asof(direction='backward')</code> → visible only from 2024-10-10 onward</li>
+    <li>levels join the PIT panel; <strong>the same <code>apply_transforms(mode='fm')</code></strong> computes YoY / changes downstream — single transform source, PIT preserved</li>
+    <li>true first-release lag ≈ <strong>42 days</strong> (median of 49 releases; this print: 39)</li>
+  </ul>
+</section>
+
+<hr />
+<p style="color:var(--text-quiet);font-size:12px"><em>Last updated: 2026-08-13</em></p>
+
+</div>
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'neutral',
+  themeVariables: {
+    primaryColor: '#EDF5E0',
+    primaryTextColor: '#274D0A',
+    primaryBorderColor: '#65A30D',
+    lineColor: '#6b6b6b',
+    secondaryColor: '#E6F1FB',
+    tertiaryColor: '#FAECE7',
+    fontFamily: 'Noto Sans TC, sans-serif'
+  },
+  flowchart: { curve: 'basis', padding: 16 }
+});
+</script>
+</body>
+</html>

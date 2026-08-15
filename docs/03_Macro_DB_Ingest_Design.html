@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Macro DB Ingest — Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#FAFAF8;--card:#FFFFFF;--text:#1a1a1a;--muted:#6b6b6b;--hint:#999;--border:rgba(0,0,0,0.08);
+ --green-bg:#EDF5E0;--green-text:#274D0A;--green-accent:#65A30D;
+ --teal-bg:#E1F5EE;--teal-text:#065040;--teal-accent:#0D7A5C;
+ --blue-bg:#E6F1FB;--blue-text:#0B447C;--blue-accent:#2563EB;
+ --coral-bg:#FAECE7;--coral-text:#702911;--coral-accent:#EA580C;
+ --amber-bg:#FEF6E0;--amber-text:#6B4F0C;--amber-accent:#D97706;
+ --purple-bg:#EEEDFE;--purple-text:#3B3489;--purple-accent:#7C3AED;
+ --red-bg:#FCEBEB;--red-text:#791F1F;--red-accent:#DC2626;
+ --code-bg:#1a1a1a;--code-text:#e8e8e0;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.75;margin:0;padding:0;font-size:15.5px;-webkit-font-smoothing:antialiased}
+.container{max-width:880px;margin:0 auto;padding:40px 28px 80px}
+.header{border-bottom:3px solid var(--green-accent);padding-bottom:18px;margin-bottom:8px}
+.header h1{font-size:27px;margin:0 0 8px;font-weight:800;letter-spacing:-0.5px}
+.header .subtitle{color:var(--muted);font-size:14px;margin:0 0 12px}
+.header .meta{display:flex;flex-wrap:wrap;gap:8px}
+.header .tag{font-size:12px;font-family:'JetBrains Mono',monospace;background:var(--green-bg);color:var(--green-text);padding:3px 10px;border-radius:20px}
+.header .tag.blue{background:var(--blue-bg);color:var(--blue-text)}
+.header .tag.purple{background:var(--purple-bg);color:var(--purple-text)}
+.header .tag.teal{background:var(--teal-bg);color:var(--teal-text)}
+.toc-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:22px 0 30px}
+.toc-box .toc-title{font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px}
+.toc-box ul{margin:0;padding:0;list-style:none;columns:2;column-gap:28px}
+.toc-box li{font-size:13.5px;padding:2px 0 2px 34px;text-indent:-34px;break-inside:avoid}
+.toc-box .tno{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--green-accent);display:inline-block;min-width:26px;margin-right:8px;text-indent:0}
+.toc-box ul ul li::before{content:'·';color:var(--green-accent);font-weight:700;display:inline-block;width:12px;text-indent:0}
+.toc-box a{color:var(--text);text-decoration:none;border-bottom:1px solid transparent}
+.toc-box a:hover{color:var(--green-accent);border-bottom-color:var(--green-accent)}
+.toc-box ul ul{columns:1;padding-left:0;margin:0;list-style:none}
+.toc-box ul ul li{font-size:12.5px;color:var(--muted);padding:2px 0 2px 52px;text-indent:-52px}
+.toc-box ul ul .tno{min-width:32px}
+.toc-box ul ul ul{padding-left:0}
+.toc-box ul ul ul li,.toc-box li.plain{padding:2px 0 2px 12px;text-indent:-12px}
+.toc-box ul ul ul li::before{content:'–';color:var(--muted);font-weight:400}
+@media(max-width:680px){.toc-box ul{columns:1}}
+h1{font-size:24px;font-weight:800;margin:36px 0 14px;letter-spacing:-0.3px}
+h2{font-size:21px;font-weight:700;margin:38px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--border)}
+h3{font-size:17.5px;font-weight:700;margin:28px 0 10px;color:#222}
+h4{font-size:15px;font-weight:700;margin:20px 0 8px;color:#333}
+p{margin:11px 0}
+ul,ol{margin:11px 0;padding-left:26px}
+li{margin:5px 0}
+a{color:#4D7C0F;text-decoration:none;border-bottom:1px dotted rgba(77,124,15,0.45)}
+a:hover{border-bottom-style:solid}
+a:hover{text-decoration:underline}
+strong{font-weight:700}
+hr{border:none;border-top:1px solid var(--border);margin:34px 0}
+code{font-family:'JetBrains Mono',monospace;font-size:0.86em;background:rgba(101,163,13,0.10);color:#2b4d0a;padding:2px 6px;border-radius:5px}
+pre{background:var(--code-bg);color:var(--code-text);border-radius:10px;padding:16px 18px;overflow-x:auto;margin:14px 0;border:1px solid #2a2a2a;line-height:1.55}
+pre code{background:none;color:inherit;padding:0;font-size:12.8px;white-space:pre}
+blockquote{margin:16px 0;padding:14px 18px;border-left:4px solid var(--blue-accent);background:var(--blue-bg);color:var(--blue-text);border-radius:0 8px 8px 0}
+blockquote p{margin:5px 0}
+blockquote code{background:rgba(11,68,124,0.10);color:var(--blue-text)}
+.table-wrap{overflow-x:auto;margin:16px 0;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--card)}
+th,td{border:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--green-bg);color:var(--green-text);font-weight:700;white-space:nowrap}
+tbody tr:nth-child(even){background:rgba(0,0,0,0.015)}
+td code,th code{font-size:0.85em}
+.docfooter{text-align:center;color:var(--hint);font-size:12px;font-style:italic;margin-top:40px;padding-top:18px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Macro DB Ingest — Design</h1>
+    <p class="subtitle">DB ingest layer design — macro pipeline parquet → quant_research (SQLite)</p>
+    <div class="meta">
+      <span class="tag">Macro Liquidity Pipeline</span>
+      <span class="tag blue">design spec</span>
+      <span class="tag teal">Last updated 2026-08-13</span>
+    </div>
+  </div>
+  <nav class="toc-box"><div class="toc-title">Contents</div><ul>
+<li><span class="tno">0.</span><a href="#0-why">Why this design exists</a></li>
+<li><span class="tno">1.</span><a href="#1-ssot-flow">SSoT &amp; data flow</a></li>
+<li><span class="tno">2.</span><a href="#2-schema">Schema design</a><ul>
+<li><span class="tno">2.1</span><a href="#21-macro-panel"><code>macro_panel</code> (long-format)</a></li>
+<li><span class="tno">2.2</span><a href="#22-lhs-table"><code>tej_universe_returns_monthly</code> (separate TEJ flow, not this ingest)</a></li>
+<li><span class="tno">2.3</span><a href="#23-metadata"><code>macro_panel_indicators</code> (static lookup)</a></li>
+</ul></li>
+<li><span class="tno">3.</span><a href="#3-release-date">release_date logic (3 source groups)</a><ul>
+<li class="plain"><a href="#31-group-1">Source Group 1: ALFRED VINTAGE_SERIES (8 series)</a></li>
+<li class="plain"><a href="#32-group-2">Source Group 2: FRED standard fixed-lag (29 daily/weekly series)</a></li>
+<li class="plain"><a href="#33-group-3">Source Group 3: CFTC TFF (2 series) — verified ground truth</a></li>
+</ul></li>
+<li><span class="tno">4.</span><a href="#4-ingest-functions">Ingest function design</a><ul>
+<li><span class="tno">4.1</span><a href="#41-main">Main function</a></li>
+<li><span class="tno">4.2</span><a href="#42-dispatcher">release_date dispatcher</a></li>
+<li><span class="tno">4.3</span><a href="#43-lhs-aggregation">LHS aggregation (planned equity-side step — not this ingest)</a></li>
+</ul></li>
+<li><span class="tno">5.</span><a href="#5-vintage-lookup">Vintage release_date lookup</a></li>
+<li><span class="tno">6.</span><a href="#6-cell-skeleton">Ingest notebook cell skeleton (7 cells + a post-execution checklist)</a></li>
+<li><span class="tno">7.</span><a href="#7-verify-queries">Verification queries</a></li>
+<li><span class="tno">8.</span><a href="#8-limitations">Limitations &amp; design boundaries</a></li>
+<li><span class="tno">9.</span><a href="#9-cross-reference">Cross-reference</a></li>
+</ul></nav>
+  <blockquote>
+<p><strong>Purpose</strong>: macro pipeline parquet → <code>quant_research</code> (SQLite) ingest-layer design.
+<strong>Status</strong>: <strong>design spec (planned ingest layer)</strong> — the pipeline's parquet outputs remain the production SSoT.
+<strong>Companion to</strong>: <code>collect_macro_data.ipynb</code> (execution notebook) · <code>Integration</code> (consumer spec) · <code>Macro_Factor_Selection_Methodology</code> (factor-model repo, downstream consumer).</p>
+</blockquote>
+<p><strong>Physical layout</strong>:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Artifact</th><th>Location</th></tr></thead>
+<tbody>
+<tr><td>Pipeline repo</td><td><code>macro-liquidity-pipeline/</code> (repo root)</td></tr>
+<tr><td>Production SSoT input</td><td><code>src/output/macro_panel_features.parquet</code></td></tr>
+<tr><td>Vintage cache (release dates)</td><td><code>src/cache_vintage/*.parquet</code></td></tr>
+<tr><td>Ingest notebook</td><td><code>notebooks/collect_macro_data.ipynb</code></td></tr>
+<tr><td>SQLite DB (downstream consumer)</td><td><code>quant_research</code> — SQLite native file</td></tr>
+</tbody>
+</table></div>
+<p>The bridge notebook lives under the pipeline's <code>notebooks/</code> because ingest logic is a pipeline-scope extension; the DB itself is environment-specific and not part of the repo.</p>
+<hr />
+<h2 id="0-why">0. Why this design exists</h2>
+<p>The <code>quant_research</code> warehouse already holds 7 ingested TEJ equity tables (<code>tej_*</code> prefix). This design lands the 40-indicator macro pipeline output in the <strong>same</strong> DB under a <code>macro_*</code> prefix, so that:</p>
+<ul>
+<li>multi-factor / Fama-MacBeth work pulls LHS (TEJ equity returns) + RHS (macro factors) with a <strong>single SQL JOIN</strong>;</li>
+<li>YoY / bps differences / level changes can be inspected directly in any SQL client;</li>
+<li>the selection-side LHS table (<code>tej_universe_returns_monthly</code>) lives beside the macro panel — built by a separate TEJ flow (planned — <a href="#22-lhs-table">§2.2</a>, <a href="#43-lhs-aggregation">§4.3</a>), for the factor-selection side to pull via plain SQL.</li>
+</ul>
+<p><strong>Architectural principle</strong>: <strong>the parquet stays the SSoT; the DB is a downstream consumer</strong> — the macro pipeline remains standalone-testable, and no production code is modified by this layer.</p>
+<hr />
+<h2 id="1-ssot-flow">1. SSoT &amp; data flow</h2>
+<p>Code blocks in this document are illustrative recipes, not shipped scripts. The same logic is laid out as cells in the companion notebook <code>collect_macro_data.ipynb</code> (<a href="#6-cell-skeleton">§6</a> maps them) — a planned skeleton, not yet executed.</p>
+<pre><code>[macro pipeline src/]
+  ├── fred_loader.py          (standard path, 29 daily/weekly series)
+  ├── fred_loader_vintage.py  (ALFRED first-release path, 8 VINTAGE_SERIES)
+  ├── cftc_loader.py          (CFTC TFF — 5 contracts fetched; 2 registered)
+  ├── finra_loader.py         (FINRA margin debt, monthly)
+  ├── transformations.py      (yoy / zscore / diff / diff_bps / pct1m; mode=mon/fm)
+  ├── pit_safe.py             (standard fixed-lag alignment)
+  ├── pit_safe_vintage.py     (ALFRED first-release alignment)
+  └── main.py                 (orchestrator)
+            ↓
+  src/output/macro_panel_features.parquet   ← production SSoT
+            ↓
+        [DB ingest layer ← this spec; produces macro_panel + macro_panel_indicators]
+            ↓
+  quant_research macro_panel (long-format, SQLite)  ←─┐
+                                                       │ SQL JOIN ON date
+  tej_universe_returns_monthly (separate TEJ flow) ────┤ (release_date as-of guarded)
+   ↑ aggregated from tej_* raw tables                  │
+     in a planned equity-side step                     │
+            ↓                                          │
+  factor selection + multi-factor + Fama-MacBeth
+       (SELECT FROM macro_panel JOIN tej_universe_returns_monthly ON date)
+</code></pre>
+<p><strong>Key invariant</strong>: <code>macro_panel_features.parquet</code> is the production SSoT. If the DB ingest fails, the DB schema changes, or the DB moves — <strong>the macro pipeline is unaffected</strong>.</p>
+<p><strong>Scope boundary</strong>: the ingest notebook produces <strong>only <code>macro_panel</code> + <code>macro_panel_indicators</code></strong> (macro domain). <code>tej_universe_returns_monthly</code> (equity-domain LHS) belongs to a <strong>separate TEJ flow</strong>: it is aggregated from the already-ingested <code>tej_*</code> raw tables in a first equity-side step (planned) and written back to the same DB, so selection and Fama-MacBeth can share one persisted LHS table (data consistency + DRY). The two domains meet only at SQL-JOIN time. Status today: the raw per-stock <code>tej_*</code> tables are in the DB; this monthly aggregate table — and the macro tables — are not yet built, so the SQL-JOIN path is design-stage end-to-end.</p>
+<hr />
+<h2 id="2-schema">2. Schema design</h2>
+<h3 id="21-macro-panel">2.1 Main table <code>macro_panel</code> (long-format)</h3>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS macro_panel (
+    series_id     TEXT    NOT NULL,    -- e.g. 'SOFR', 'BAMLH0A0HYM2', 'TFF_10Y_LEVERAGED'
+    date          DATE    NOT NULL,    -- data_date (reference period end / observation date)
+    transform     TEXT    NOT NULL,    -- 'level' | 'diff' | 'diff_bps' | 'pct1m' | 'yoy'
+    value         REAL,                -- transformed value (NaN allowed for early sample)
+    release_date  DATE,                -- effective release date (when public knew this value)
+    block         TEXT,                -- 1-9 (rates / liquidity / credit / curve / vol / leverage / fx / macro / cftc)
+    -- housekeeping columns (aligned with the tej_* table convention)
+    fetched_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    source        TEXT      DEFAULT 'macro_pipeline',
+    PRIMARY KEY (series_id, date, transform)
+)
+</code></pre>
+<p><strong>Design rationale</strong>:</p>
+<ul>
+<li><strong>Long-format</strong>: a new indicator is an INSERT, not an <code>ALTER TABLE</code>; a new transform needs no schema change.</li>
+<li><strong>PRIMARY KEY (series_id, date, transform)</strong>: idempotent <code>INSERT OR IGNORE</code> dedup.</li>
+<li><strong><code>date</code> is the data date, not the release date</strong> — aligned with the pipeline's panel index convention.</li>
+<li><strong><code>release_date</code> as an explicit column is the PIT-integrity core</strong>: downstream SQL JOINs use it as the as-of guard.</li>
+<li><strong><code>block</code></strong>: metadata for SQL filtering (e.g. <code>WHERE block IN ('3','6')</code> pulls the credit + leverage subset).</li>
+</ul>
+<h3 id="22-lhs-table">2.2 LHS aggregation table <code>tej_universe_returns_monthly</code> (separate TEJ flow, <strong>not</strong> this ingest)</h3>
+<blockquote>
+<p>⚠️ <strong>Scope note</strong>: this table is <strong>not produced by <code>collect_macro_data.ipynb</code></strong>. It belongs to the equity domain — aggregated from the already-ingested <code>tej_*</code> raw tables in a first equity-side step (planned), then written back to the DB. It is documented here because it co-habits with <code>macro_panel</code> and the two meet at JOIN time, so schema consistency belongs in one place. The published factor-selection run computed this same equal-weight aggregate in-notebook; this table is the planned persisted home of that aggregation.</p>
+</blockquote>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS tej_universe_returns_monthly (
+    year_month             TEXT    NOT NULL,    -- 'YYYY-MM' format
+    universe_label         TEXT    NOT NULL,    -- 'equal_weight' | 'cap_weight'
+    n_stocks               INTEGER,             -- universe size that month
+    monthly_return         REAL,                -- aggregate monthly return
+    -- housekeeping columns
+    fetched_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    source                 TEXT      DEFAULT 'tej_universe_aggregation',
+    PRIMARY KEY (year_month, universe_label)
+)
+</code></pre>
+<p><strong>Why aggregate-and-persist</strong>: the aggregation logic runs on the equity side, but the result is <strong>persisted to a DB table rather than kept in memory</strong>. Reasons: (1) <strong>DRY + consistency</strong> — selection and Fama-MacBeth read the <em>same</em> persisted LHS, so small logic drifts (month-end alignment; whether a within-month IPO enters equal-weight) cannot silently diverge; (2) <strong>SQL-client inspectability</strong> — universe monthly returns can be quality-checked with a plain query; (3) <strong>compute once</strong> — when the table exists, the selection side simply <code>SELECT</code>s both LHS variants (equal-weight primary + cap-weight robustness — same universe, weighting isolated) instead of re-aggregating 2,049 stocks (PIT universe, delisted included).</p>
+<h3 id="23-metadata">2.3 Metadata table <code>macro_panel_indicators</code> (static lookup)</h3>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS macro_panel_indicators (
+    series_id          TEXT    PRIMARY KEY,
+    full_name          TEXT,                -- 'Secured Overnight Financing Rate'
+    fred_id            TEXT,                -- 'SOFR' (FRED) / 'TFF_10Y_LEVERAGED' (CFTC)
+    block              TEXT    NOT NULL,    -- 1-9
+    block_name         TEXT,                -- 'Repo Plumbing' / 'Liquidity' / ...
+    category           TEXT,                -- statistical tag (rates / liquidity / leverage / ...)
+    publication_lag    INTEGER,             -- standard-path config value (days)
+    pit_path           TEXT,                -- 'standard_fixed_lag' | 'alfred_vintage'
+    real_lag_days      INTEGER,             -- empirical (e.g. CPI 42, M2 55, PCEPILFE 58)
+    tier               INTEGER,             -- 1 (deep) / 2 (mid) / 3 (light)
+    is_working         INTEGER DEFAULT 1,   -- 1 if functional, 0 if the upstream id is retired
+    fetched_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    source             TEXT      DEFAULT 'macro_pipeline'
+)
+</code></pre>
+<p><strong>Why</strong>: any query can <code>JOIN macro_panel m ON m.series_id = i.series_id</code> and read block / pit_path / lag metadata directly, instead of memorising per-series facts.</p>
+<hr />
+<h2 id="3-release-date">3. release_date logic (3 source groups)</h2>
+<p>Every computed release date is verified against the official release schedule rather than assumed.</p>
+<h3 id="31-group-1">Source Group 1: ALFRED VINTAGE_SERIES (8 series)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Item</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td>Series</td><td><code>CPIAUCSL</code> / <code>M2SL</code> / <code>PCEPILFE</code> + <code>NFCI</code> family ×5 (weekly, retroactively revised by the Chicago Fed → vintage path)</td></tr>
+<tr><td>release_date</td><td>ALFRED <code>realtime_start</code> — <strong>direct ground truth</strong>, read from <code>src/cache_vintage/*.parquet</code></td></tr>
+</tbody>
+</table></div>
+<p><strong>Implementation</strong>: <code>fred_loader_vintage.py</code> already exposes the <code>realtime_start</code> column; the ingest reads it straight into <code>macro_panel.release_date</code> (<a href="#5-vintage-lookup">§5</a>).</p>
+<h3 id="32-group-2">Source Group 2: FRED standard fixed-lag (29 daily/weekly series)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Calculation</th><th><code>release_date = data_date + config.publication_lag</code></th></tr></thead>
+<tbody>
+<tr><td>Source of <code>publication_lag</code></td><td><code>config.py</code> <code>Indicator</code> dataclass, <code>lag</code> field (SSoT)</td></tr>
+<tr><td>Validation</td><td>ALFRED sweep empirically confirmed daily/weekly standard lags are calibrated (median real lag 0–1 day). The two FX series read ≈5 days in ALFRED — the weekly H.10 archival for DEXTAUS (FRED daily availability keeps its config lag at 1 by design), a calibrated 5 for DTWEXEMEGS — see Integration <a href="02_Integration.html#6-fx-factor-specifics-dextaus">§6</a>.</td></tr>
+</tbody>
+</table></div>
+<h3 id="33-group-3">Source Group 3: CFTC TFF (2 series) — verified ground truth</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Item</th><th>Verified value (CFTC.gov + secondary sources)</th></tr></thead>
+<tbody>
+<tr><td>Data date</td><td>Tuesday (weekly open-interest as-of date)</td></tr>
+<tr><td>Release date</td><td>Friday 3:30 PM Eastern Time (weekly)</td></tr>
+<tr><td>Lag (regular)</td><td><strong>3 business days</strong> (Tue → Fri)</td></tr>
+<tr><td>Holiday rule</td><td>Monday US federal holiday → data shifts Tue → Wed; Friday holiday → release shifts to Thursday</td></tr>
+</tbody>
+</table></div>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="language-python">import pandas as pd
+from pandas.tseries.holiday import USFederalHolidayCalendar
+from pandas.tseries.offsets import CustomBusinessDay
+
+us_bday = CustomBusinessDay(calendar=USFederalHolidayCalendar())
+
+def cftc_tff_release_date(data_date_tuesday):
+    &quot;&quot;&quot;
+    Calculate CFTC TFF release date.
+    Standard: Tuesday data → Friday release (3 business days).
+    Federal holiday on Friday shifts release to Thursday;
+    Federal holiday on Monday shifts data collection to Wednesday (data_date already shifted upstream).
+    &quot;&quot;&quot;
+    # data_date is already Tuesday (it arrives already shifted in the CFTC/Socrata feed; cftc_loader passes report_date through unchanged)
+    # Standard: + 3 business days (Tue + 3 BDay = Fri)
+    release = data_date_tuesday + 3 * us_bday
+    return release
+</code></pre>
+<hr />
+<h2 id="4-ingest-functions">4. Ingest function design</h2>
+<h3 id="41-main">4.1 Main function</h3>
+<p>Values for <strong>all</strong> series — vintage included — come from the features parquet (single value source); this function melts the wide panel to long-format and attaches <code>release_date</code> per source group.</p>
+<pre><code class="language-python">def ingest_macro_panel(
+    parquet_path: Path,          # output/macro_panel_features.parquet
+    conn: sqlite3.Connection,
+    config_module,                # imported config.py for Indicator metadata
+) -&gt; dict:
+    &quot;&quot;&quot;
+    Read macro_panel_features.parquet (wide-format),
+    melt to long-format,
+    compute release_date per source group,
+    INSERT OR IGNORE into macro_panel.
+
+    Returns: dict with rows_read / rows_inserted / rows_skipped (idempotent dedup) / errors
+    &quot;&quot;&quot;
+    # Step 1: Read parquet (wide-format)
+    df_wide = pd.read_parquet(parquet_path)
+    # df_wide.index = DateTimeIndex (business days)
+    # df_wide.columns = [SOFR, BAMLH0A0HYM2, BAMLH0A0HYM2_diff_bps, ..., DEXTAUS_pct1m, ...]
+
+    # Step 2: Melt to long-format
+    df_long = df_wide.reset_index().melt(
+        id_vars=['date'],
+        var_name='series_transform',
+        value_name='value'
+    )
+
+    # Step 3: Parse series_id + transform from column name
+    # e.g. 'SOFR' → ('SOFR', 'level')
+    # e.g. 'DEXTAUS_pct1m' → ('DEXTAUS', 'pct1m')
+    # e.g. 'BAMLH0A0HYM2_diff_bps' → ('BAMLH0A0HYM2', 'diff_bps')
+    df_long[['series_id', 'transform']] = df_long['series_transform'].apply(
+        parse_series_transform
+    )
+
+    # Step 4: Compute release_date per source group
+    df_long['release_date'] = df_long.apply(
+        lambda row: compute_release_date(
+            row['series_id'], row['date'], config_module
+        ),
+        axis=1
+    )
+
+    # Step 5: Add block metadata
+    df_long['block'] = df_long['series_id'].apply(
+        lambda sid: get_block_from_config(sid, config_module)
+    )
+
+    # Step 6: INSERT OR IGNORE (idempotent)
+    df_long_clean = df_long.dropna(subset=['value'])  # skip NaN rows
+    cur = conn.cursor()
+    cur.executemany(&quot;&quot;&quot;
+        INSERT OR IGNORE INTO macro_panel
+        (series_id, date, transform, value, release_date, block)
+        VALUES (?, ?, ?, ?, ?, ?)
+    &quot;&quot;&quot;, df_long_clean[['series_id', 'date', 'transform', 'value', 'release_date', 'block']].values.tolist())
+    rows_inserted = cur.rowcount
+    conn.commit()
+
+    return {
+        'rows_read': len(df_long),
+        'rows_inserted': rows_inserted,
+        'rows_skipped_nan': len(df_long) - len(df_long_clean),
+        'rows_skipped_dup': len(df_long_clean) - rows_inserted,
+    }
+</code></pre>
+<h3 id="42-dispatcher">4.2 release_date dispatcher</h3>
+<pre><code class="language-python">def compute_release_date(series_id, data_date, config_module):
+    &quot;&quot;&quot;
+    Dispatch to one of 3 source groups for release_date.
+    &quot;&quot;&quot;
+    # Group 1: ALFRED VINTAGE_SERIES
+    if series_id in config_module.VINTAGE_SERIES:
+        # release_date = true first-release date, looked up from cache_vintage — see §5
+        return get_alfred_realtime_start(series_id, data_date)
+
+    # Group 3: CFTC TFF
+    if series_id.startswith('TFF_'):
+        return cftc_tff_release_date(data_date)
+
+    # Group 2: FRED standard fixed-lag (default)
+    indicator = config_module.get(series_id)
+    return data_date + pd.Timedelta(days=indicator.lag)  # dataclass field: lag (the DB column publication_lag maps from it)
+</code></pre>
+<h3 id="43-lhs-aggregation">4.3 LHS aggregation (<strong>planned equity-side step — not this ingest</strong>)</h3>
+<blockquote>
+<p>⚠️ <strong>Scope note</strong>: this function does <strong>not</strong> belong to <code>collect_macro_data.ipynb</code>. It runs as a first equity-side step (planned) and writes its result back to the DB. It is documented here because the schema co-habits with <code>macro_panel</code>; selection and Fama-MacBeth share the persisted table.</p>
+</blockquote>
+<pre><code class="language-python">def build_tej_universe_returns_monthly(conn):
+    &quot;&quot;&quot;
+    Pre-aggregate TEJ universe returns at month-end, 2 universe labels.
+    Idempotent via INSERT OR IGNORE.
+    ⚠️ Planned equity-side step (not part of the collect_macro_data ingest).
+    &quot;&quot;&quot;
+    # 1. Equal-weight TEJ universe (selection primary LHS)
+    eq_weight_sql = &quot;&quot;&quot;
+    WITH daily_returns AS (
+      SELECT 
+        t.coid,
+        t.mdate,
+        strftime('%Y-%m', t.mdate) AS year_month,
+        t.roia / 100.0 AS daily_ret
+      FROM tej_ewprcd2 t
+      WHERE t.mdate BETWEEN :win_start AND :win_end   -- research-window guard (mirror the estimation window)
+      -- ⚠️ PIT universe (survivorship-corrected): do NOT JOIN tej_ewnprcstd to apply a
+      --    snapshot filter (n.market IN ('TSE','OTC')) — that would re-exclude the
+      --    backfilled delisted stocks (market='DIST'), silently re-introducing
+      --    survivorship bias into the LHS / market factor. The members of tej_ewprcd2
+      --    (distinct coid within the research window = 2,049) ARE the PIT-universe SSoT; delisted stocks contribute
+      --    returns only in their traded months and drop out afterwards — exactly the
+      --    PIT behaviour we want. The
+      --    universe-construction layer owns include/exclude decisions; not redefined in this query.
+    ),
+    monthly_per_stock AS (
+      SELECT 
+        coid, year_month,
+        EXP(SUM(LN(1.0 + daily_ret))) - 1.0 AS monthly_ret
+      FROM daily_returns
+      GROUP BY coid, year_month
+    )
+    INSERT OR IGNORE INTO tej_universe_returns_monthly
+    (year_month, universe_label, n_stocks, monthly_return)
+    SELECT 
+      year_month, 'equal_weight', COUNT(*), AVG(monthly_ret)
+    FROM monthly_per_stock
+    GROUP BY year_month
+    &quot;&quot;&quot;
+
+    # 2. Cap-weight TEJ universe (robustness; also the FM market-factor source)
+    #    Same PIT principle: no snapshot filter; cap weights from PIT data; delisted stocks count in their traded months.
+
+    conn.execute(eq_weight_sql)
+    # ... execute the cap-weight variant
+    conn.commit()
+</code></pre>
+<hr />
+<h2 id="5-vintage-lookup">5. Vintage release_date lookup</h2>
+<p>For the 8 <code>VINTAGE_SERIES</code>, <code>release_date</code> cannot be computed as <code>data_date + lag</code> — the true first-release date is ALFRED's <code>realtime_start</code>, already persisted in <code>src/cache_vintage/*.parquet</code> (long-format: <code>realtime_start, date, value</code>).</p>
+<p><strong>This path supplies release dates only.</strong> The values themselves are read from the features parquet like every other series (single value source; the pipeline computes vintage transforms uniformly via <code>apply_transforms(mode='fm')</code>). The notebook implements this as a split, not an overwrite: Cell 5 melts the full features parquet but inserts only the standard + CFTC rows; Cell 6 takes the vintage rows set aside by that melt, attaches release_date by a backward as-of join on the cached first-release dates (grid dates before a series' first vintage are dropped, not ingested), and inserts them — values from the features parquet throughout; the end state matches the <a href="#42-dispatcher">§4.2</a> dispatch.</p>
+<pre><code class="language-python">def vintage_release_date_map(config_module) -&gt; dict:
+    """
+    Build {series_id: {data_date: release_date}} for the 8 VINTAGE_SERIES.
+    release_date = min realtime_start per data_date (first release) —
+    explicit stable sort + drop_duplicates, mirroring pit_safe_vintage.extract_first_release.
+    """
+    VINTAGE_CACHE_DIR = Path("src/cache_vintage")   # note: the path constant lives in the vintage loader, not config
+    out = {}
+    for series_id in config_module.VINTAGE_SERIES:
+        df = pd.read_parquet(VINTAGE_CACHE_DIR / f"{series_id}.parquet")
+        first = (df.sort_values(['date', 'realtime_start'], kind='stable')
+                   .drop_duplicates(subset=['date'], keep='first'))
+        out[series_id] = dict(zip(first['date'], first['realtime_start']))
+    return out
+</code></pre>
+<hr />
+<h2 id="6-cell-skeleton">6. Ingest notebook cell skeleton (7 cells + a post-execution checklist)</h2>
+<blockquote>
+<p><strong>Scope</strong>: <code>collect_macro_data.ipynb</code> produces <code>macro_panel</code> + <code>macro_panel_indicators</code> only (macro domain). <code>tej_universe_returns_monthly</code> is built by a separate equity-side step (<a href="#43-lhs-aggregation">§4.3</a> scope note). Numbering: Cell 1 is the markdown header, so code cells run 2–7; an unnumbered post-execution checklist closes the file (8 cells in total).</p>
+</blockquote>
+<pre><code>Cell 1 (markdown): # Macro Indicator Ingest — pipeline parquet → quant_research (SQLite)
+                   # Status / scope / prerequisites
+Cell 2 (code):     # Environment setup (sqlite3, pandas, import config from the pipeline)
+Cell 3 (code):     # CREATE TABLE schemas (macro_panel + macro_panel_indicators)
+                   #   ← tej_universe_returns_monthly NOT created here (a separate equity-side step builds it)
+Cell 4 (code):     # Populate macro_panel_indicators (static lookup from config.py)
+Cell 5 (code):     # ingest_macro_panel() — melt features parquet; release_date for the standard + CFTC groups (vintage rows set aside for Cell 6)
+Cell 6 (code):     # VINTAGE_SERIES rows — attach as-of first-release release_date from cache_vintage, then insert (values from the features parquet)
+Cell 7 (code):     # Verification SELECTs + monitoring SQL (§7)
+</code></pre>
+<hr />
+<h2 id="7-verify-queries">7. Verification queries</h2>
+<pre><code class="language-sql">-- Q1: row count per transform
+SELECT transform, COUNT(*) AS n
+FROM macro_panel
+GROUP BY transform;
+
+-- Q2: series count + row count per block
+SELECT block, COUNT(DISTINCT series_id) AS n_series, COUNT(*) AS n_rows
+FROM macro_panel
+GROUP BY block;
+
+-- Q3: release_date vs data_date gap distribution per series
+SELECT 
+    series_id, 
+    transform,
+    AVG(julianday(release_date) - julianday(date)) AS avg_lag_days,
+    MAX(julianday(release_date) - julianday(date)) AS max_lag_days,
+    MIN(julianday(release_date) - julianday(date)) AS min_lag_days
+FROM macro_panel
+WHERE transform = 'level'
+GROUP BY series_id;
+
+-- Q4: ALFRED VINTAGE_SERIES vs standard fixed-lag comparison
+SELECT 
+    m.series_id,
+    i.pit_path,
+    i.publication_lag AS config_lag,
+    AVG(julianday(m.release_date) - julianday(m.date)) AS empirical_lag,
+    AVG(julianday(m.release_date) - julianday(m.date)) - i.publication_lag AS lag_gap
+FROM macro_panel m
+JOIN macro_panel_indicators i ON m.series_id = i.series_id
+WHERE m.transform = 'level'
+GROUP BY m.series_id, i.pit_path, i.publication_lag;
+-- Expected: VINTAGE_SERIES empirical_lag ≈ CPI 42 / M2 55 / PCEPILFE 58; publication_lag is NULL for vintage rows → lag_gap undefined
+-- standard fixed-lag series: gap ≈ 0 (calibrated per the ALFRED sweep)
+
+-- Q5: Sample as-of join (RHS macro + LHS equity, no look-ahead)
+SELECT 
+    u.year_month,
+    u.universe_label,
+    u.monthly_return AS lhs_return,
+    m.value AS rhs_hy_oas_dbps
+FROM tej_universe_returns_monthly u
+LEFT JOIN macro_panel m
+    ON m.series_id = 'BAMLH0A0HYM2'
+    AND m.transform = 'diff_bps'
+    AND m.release_date &lt;= date(u.year_month || '-01')  -- as-of guard
+WHERE u.universe_label = 'equal_weight'
+ORDER BY u.year_month
+LIMIT 10;
+</code></pre>
+<hr />
+<h2 id="8-limitations">8. Limitations &amp; design boundaries</h2>
+<ul>
+<li>Standard-path <code>publication_lag</code> values are <strong>calibrated config defaults, not per-release actuals</strong> (the ALFRED sweep confirmed a median real lag of 0–1 day for rates, credit and balance-sheet series; the two FX series read ≈5 days against the weekly H.10 archive — DEXTAUS stays at config lag 1 by design, DTWEXEMEGS is calibrated at 5 (Integration <a href="02_Integration.html#6-fx-factor-specifics-dextaus">§6</a>); monthly macro takes the first-release route instead).</li>
+<li>CFTC TFF holiday shifting uses the standard <code>USFederalHolidayCalendar</code>, <strong>not NYSE-specific holidays</strong> (difference minimal at weekly cadence).</li>
+<li>FINRA margin debt (monthly) follows the same standard fixed-lag rule through the dispatcher's default branch (<code>lag=25</code>); as a non-FRED source it is not ALFRED-sweep-verifiable — its lag is calibrated from the FINRA release schedule.</li>
+<li>The DB is refreshed only when the ingest notebook is re-run; it is a research warehouse, not a live mirror of the parquet.</li>
+</ul>
+<hr />
+<h2 id="9-cross-reference">9. Cross-reference</h2>
+<ul>
+<li><code>collect_macro_data.ipynb</code>: ingest execution notebook (planned)</li>
+<li><code>Integration</code>: features-parquet consumer spec — DB execution context + as-of JOIN pattern; CFTC TFF release_date ground truth</li>
+<li><code>Macro_Factor_Selection_Methodology</code> (factor-model repo): downstream consumer — documents the executed selection run (in-notebook LHS); the SQL-JOIN pull from this DB is the planned production path</li>
+<li><code>src/config.py</code>: <code>Indicator</code> dataclass with the <code>lag</code> field (publication-lag SSoT)</li>
+<li><code>src/output/macro_panel_features.parquet</code>: production SSoT input</li>
+</ul>
+<hr />
+<p><em>Last updated: 2026-08-13</em></p>
+</div>
+</body>
+</html>

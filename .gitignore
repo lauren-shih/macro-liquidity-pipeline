@@ -1,0 +1,24 @@
+# secrets
+.env
+
+# data caches & generated output (rebuilt by the pipeline)
+cache/
+cache_vintage/
+cache_dashboard/
+output/
+*.parquet
+*.bak*
+
+# python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# local tooling
+.conda/
+debug_tools/
+.DS_Store
+
+# internal Chinese mirrors (the English docs are the source of truth)
+*_CN.md
+*_CN.html

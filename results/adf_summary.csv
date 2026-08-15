@@ -1,0 +1,15 @@
+﻿section,series,transform,n,start,end,adf_stat,p_value,verdict,recommendation,note
+A,HY OAS,level,7459,1996/12/31,2026/7/16,-3.251,0.0172,stationary,expanding,
+A,IG OAS,level,807,2023/6/19,2026/7/16,-2.48,0.1205,non-stationary,rolling(252d),
+A,EM HY OAS,level,808,2023/6/19,2026/7/16,-2.263,0.1842,non-stationary,rolling(252d),
+A,credit_quality_spread (CCC-BB),level,808,2023/6/19,2026/7/16,-1.774,0.3932,non-stationary,rolling(252d),
+A,VIX,level,2178,2018/1/2,2026/7/17,-5.414,0,stationary,expanding,
+A,repo_spread (SOFR-EFFR),level(bps),2070,2018/4/3,2026/7/17,-5.045,0,stationary,expanding,
+A,TFF_10Y lev net,weekly Δ,445,2018/1/9,2026/7/14,-21.963,0,stationary,expanding,變異數 regime caveat:若 expanding 稀釋近期波動 → rolling 覆寫 + documented reason
+A,TFF_2Y lev net,weekly Δ,445,2018/1/9,2026/7/14,-18.645,0,stationary,expanding,變異數 regime caveat:若 expanding 稀釋近期波動 → rolling 覆寫 + documented reason
+B,dHY OAS,monthly Δ,355,1997/1/31,2026/7/31,-8.279,0,stationary,OK as FM factor,
+B,drepo_spread,monthly Δ(bps),99,2018/5/31,2026/7/31,-4.177,0.0007,stationary,OK as FM factor,
+B,dVIX,monthly Δ,102,2018/2/28,2026/7/31,-3.724,0.0038,stationary,OK as FM factor,
+B,dT10Y2Y,monthly Δ,102,2018/2/28,2026/7/31,-8.451,0,stationary,OK as FM factor,
+B,dNet Liquidity,monthly Δ($bn),102,2018/2/28,2026/7/31,-9.357,0,stationary,OK as FM factor,WDTGAL = H.4.1 週三水位
+B,DEXTAUS pct1m,monthly pct1m,102,2018/2/28,2026/7/31,-8.553,0,stationary,OK as FM factor,
