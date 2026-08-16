@@ -2,7 +2,7 @@
 
 A production-grade US macro-liquidity monitoring and **PIT-safe feature pipeline**: 40 indicators across 9 blocks (repo plumbing, Fed balance-sheet liquidity, credit, curve, volatility, leverage, FX, macro, CFTC positioning), sourced from FRED / ALFRED / CFTC / FINRA, cached locally, aligned point-in-time, and published as two independent outputs — an un-lagged monitoring panel that feeds a 9-page Plotly dashboard suite, and a strictly point-in-time feature matrix for cross-sectional factor research.
 
-**Live dashboards:** [Macro State Scorecard](https://lauren-shih.github.io/macro-liquidity-pipeline/dashboards/00_macro_scorecard.html) — front page linking all eight panels (repo plumbing · net liquidity · credit stress ×2 · yield curve · FX/vol/inflation · leverage · leveraged-funds basis trade).
+**Interactive dashboards:** [Macro State Scorecard](https://lauren-shih.github.io/macro-liquidity-pipeline/dashboards/00_macro_scorecard.html) — front page linking all eight panels (repo plumbing · net liquidity · credit stress ×2 · yield curve · FX/vol/inflation · leverage · leveraged-funds basis trade).
 
 **Docs:** [Architecture](https://lauren-shih.github.io/macro-liquidity-pipeline/01_Architecture.html) · [Integration (consumer spec)](https://lauren-shih.github.io/macro-liquidity-pipeline/02_Integration.html) · [Macro DB Ingest — Design](https://lauren-shih.github.io/macro-liquidity-pipeline/03_Macro_DB_Ingest_Design.html)
 
